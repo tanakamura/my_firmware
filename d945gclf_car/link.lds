@@ -1,7 +1,7 @@
 OUTPUT_FORMAT("binary")
 
 ROM_SIZE = 64K;
-INIT16_SIZE = 1K;
+INIT16_SIZE = 128;
 
 MEMORY {
        INIT16 (rx) : org = 64K-INIT16_SIZE, len = INIT16_SIZE
@@ -11,6 +11,7 @@ MEMORY {
 
 SECTIONS {
          .text : {
+               FILL(0xffffffff);
                __start32 = .;
                *(.text);
                *(.rodata);
@@ -20,11 +21,10 @@ SECTIONS {
          } > ROM32 AT > ROM
 
          .text16 : {
+               FILL(0xffffffff);
                *(.text16);
-               FILL(0x90909090);
                . = INIT16_SIZE-16;
                *(.reset16)
-               FILL(0x90909090);
                . = ALIGN(16);
          } > INIT16 AT > ROM
 
