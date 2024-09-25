@@ -95,6 +95,7 @@ init_uart:
 	mov	$UART_LCR, %dx
 	outb	%al, %dx
 
+	mov	$UART_DATA, %dx
 	mov	$(Hello_end-Hello), %ecx
 	lea	Hello, %esi
 
