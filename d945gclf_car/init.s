@@ -31,6 +31,9 @@
 .macro	pci_write_config16 bus, dev, fn, offset
 	pci_write_config \bus, \dev, \fn, \offset, %ax, %cx
 .endm
+.macro	pci_write_config8 bus, dev, fn, offset
+	pci_write_config \bus, \dev, \fn, \offset, %al, %cl
+.endm
 
 
 	.text
@@ -41,6 +44,7 @@ init32:
 	mov	%ax, %ds
 	mov	%ax, %es
 	mov	%ax, %fs
+	mov	%ax, %ss
 
 init_lpc:
 	// enable superio & coma
@@ -95,35 +99,27 @@ init_uart:
 	mov	$UART_LCR, %dx
 	outb	%al, %dx
 
-	mov	$UART_DATA, %dx
-	mov	$(Hello_end-Hello), %ecx
-	lea	Hello, %esi
-
-	rep	outsb
+	mov	$1f, %ebp
+	jmp	enable_car
 
 1:
+	mov	$0xf0000, %esp
+
+	call	cmain
+
 	hlt
 	jmp	1b
 
 	.section .rodata, "a"
-	.globl gdt_table
 	.align	16
 gdt_table:
 	.quad	0						   # selector[0x00]
 	.quad	((0xc)<<52) | (0xf<<48) | (0x93<<40) | (0xffff<<0) # selector[0x08] : full data access
 	.quad	((0xc)<<52) | (0xf<<48) | (0x9b<<40) | (0xffff<<0) # selector[0x10] : full text access
 
-Hello:
-	.ascii "Hello, World!\r\n"
-Hello_end:
-
-
-
 	.section	.text16, "ax"
 	.code16
 
-	.globl	init
-body:
 init:
 	lgdtl	%cs:gdt
 	mov	%cr0, %eax
@@ -136,7 +132,6 @@ gdt:
 	.word	(8*3)-1
 	.long	gdt_table
 
-body_end:
 
 	.section	.reset16, "ax"
 reset:
