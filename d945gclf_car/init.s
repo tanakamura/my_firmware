@@ -105,7 +105,7 @@ init_uart:
 1:
 	mov	$0xf0000, %esp
 
-	call	cmain
+	call	rmain
 
 	hlt
 	jmp	1b
