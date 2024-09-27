@@ -43,9 +43,9 @@ fn print_hex(v:u32) {
 #[no_mangle]
 pub unsafe extern "C" fn rmain() {
     puts("Hello, World from Rust!!!!!! Hello!!!!!!");
-    let ptr = 0xc0000 as *mut u32;
-    let stack_size = 16*1024;
-    let fill_size = (20*1024-stack_size)/4;
+    let ptr_base = 0xfffd0000;
+    let ptr = ptr_base as *mut u32;
+    let fill_size = (128*1024)/4;
     let fill_range = core::slice::from_raw_parts_mut(ptr, fill_size);
     for v in fill_range.into_iter().enumerate() {
         *v.1 = v.0 as u32;
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn rmain() {
     for v in fill_range.into_iter().enumerate() {
         if *v.1 != v.0 as u32 {
             puts("fail");
-            print_hex(v.0 as u32);
+            print_hex((v.0+ptr_base) as u32);
             print_hex(*v.1);
             return;
         }

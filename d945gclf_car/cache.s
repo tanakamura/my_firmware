@@ -10,20 +10,19 @@ enable_car:
 	mov	%eax, %cr0
 
 	## enable mtrr
-	mov	$((1<<10)|(1<<11)), %eax
+	mov	$((1<<11)|0), %eax
 	mov	$0, %edx
 	mov	$0x2ff, %ecx
 	wrmsr
 
-	mov	$0x06060606, %edx
-	mov	%edx, %eax
-	mov	$0x268, %ecx
-
-1:
+	## wb : 0xfffc0000 - 0xffffffff
+	xor	%edx, %edx
+	mov	$0xfffc0006, %eax
+	mov	$0x200, %ecx 	# mtrr base
 	wrmsr
-	inc	%ecx
-	cmp	$0x270, %ecx
-	jnz	1b
+	mov	$(0xfffc0000 | (1<<11)), %eax
+	mov	$0x201, %ecx	# mtrr mask
+	wrmsr
 
 	## enable cache
 	mov	%cr0, %eax
@@ -31,8 +30,9 @@ enable_car:
 	mov	%eax, %cr0
 
 	## fill
-	mov	$0xc0000, %esi
+	mov	$0xfffc0000, %esi
 	mov	$(256*1024/4), %ecx
 	rep	lodsl
+1:
 
 	jmp	*%ebp

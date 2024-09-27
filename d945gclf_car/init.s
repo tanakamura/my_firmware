@@ -28,6 +28,9 @@
 	out	\AX, %dx
 .endm
 
+.macro	pci_write_config32 bus, dev, fn, offset
+	pci_write_config \bus, \dev, \fn, \offset, %eax, %ecx
+.endm
 .macro	pci_write_config16 bus, dev, fn, offset
 	pci_write_config \bus, \dev, \fn, \offset, %ax, %cx
 .endm
@@ -35,6 +38,11 @@
 	pci_write_config \bus, \dev, \fn, \offset, %al, %cl
 .endm
 
+.macro	call_nostack label
+	mov	$1f, %ebp
+	jmp	\label
+1:
+.endm
 
 	.text
 	.code32
@@ -103,7 +111,7 @@ init_uart:
 	jmp	enable_car
 
 1:
-	mov	$0xf0000, %esp
+	mov	$__stack_bottom, %esp
 
 	call	rmain
 

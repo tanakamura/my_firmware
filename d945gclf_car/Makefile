@@ -5,10 +5,10 @@ ASFLAGS=-32
 
 OBJS=init.o cache.o print.o
 rom: rlib $(OBJS) link.lds
-	ld -T link.lds $(OBJS) r/target/i686-unknown-linux-musl/release/libr.a -o $@ -Map rom.map
+	ld -T link.lds $(OBJS) r/target/i686-unknown-linux-gnu/release/libr.a -o $@ -Map rom.map
 
 rlib:
-	cd r/; RUSTFLAGS="-C target-feature=-sse -C relocation-model=static" cargo build --release --target=i686-unknown-linux-musl
+	cd r/; RUSTFLAGS="-C target-feature=-sse -C relocation-model=static" cargo build --release --target=i686-unknown-linux-gnu
 .POHNY: rlib
 
 clean:
