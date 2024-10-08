@@ -1,0 +1,17 @@
+[package]
+name = "r"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+x86 = "0.52.0"
+
+[lib]
+crate-type = ["staticlib"] # Creates static lib
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+
+[target.i686-unknown-linux-gnu]
+rustflags = ["-Crelocation-model=static"]
