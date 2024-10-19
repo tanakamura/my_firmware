@@ -28,6 +28,8 @@ OUT32 = 13
 RDMSR = 14
 WRMSR = 15
 
+LOADBIN = 16
+RUNBIN = 17
 
 
 class Machine:
@@ -159,6 +161,34 @@ def pci_config_write16(m:Machine, bus:int, dev:int, func:int, offset:int, data:i
 def pci_config_write32(m:Machine, bus:int, dev:int, func:int, offset:int, data:int):
     outl(m, 0xcf8, (1 << 31) | (bus << 16) | (dev << 11) | (func << 8) | (offset&0xfc))
     return outl(m, 0xcfc+(offset&3), data)
+
+def loadbin(m:Machine, binary):
+    sumbyte = 0
+    for i in binary:
+        sumbyte ^= i
+
+    data = struct.pack("<BIB", LOADBIN, len(binary), sumbyte)
+
+    m.to_mon.write(data)
+    m.to_mon.flush()
+
+    m.to_mon.write(binary)
+    m.to_mon.flush()
+
+    ack = m.from_mon.read(1)
+    if ack[0] != 0xfe:
+        print("loadbin failed")
+        sys.exit(1)
+
+def runbin(m:Machine):
+    data = struct.pack("<B", RUNBIN)
+    m.to_mon.write(data)
+    m.to_mon.flush()
+    data = m.from_mon.read(4)
+    x = struct.unpack("<I", data)[0]
+    print(f"runbin: {x:x}")
+    data = m.from_mon.read(4)
+    return struct.unpack("<I", data)[0]
 
 def init(m:Machine):
     data = struct.pack("<B", INIT)

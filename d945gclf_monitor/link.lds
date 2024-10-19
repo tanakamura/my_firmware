@@ -16,6 +16,7 @@ SECTIONS {
                __start32 = .;
                *(.text .text.*);
                *(.rodata* .rdata*);
+               *(.data* .rwdata*);
                . = ALIGN(16);
                __size = .-__start32;
                . = .+(ROM_SIZE-INIT16_SIZE-__size);

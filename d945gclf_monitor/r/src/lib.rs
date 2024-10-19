@@ -13,3 +13,4 @@ pub unsafe extern "C" fn rmain() {
     console::console_loop();
 }
 
+pub use crate::console::runbin;
