@@ -33,7 +33,7 @@ const UART_LSR: u16 = UART_BASE + 5;
 
 //const LOADBIN_BASE:u32 = 0x80000;
 
-const LOADBIN_BASE:u32 = 0x40_0000;
+const LOADBIN_BASE: u32 = 0x40_0000;
 //static mut LOADBIN_BASE: [u8; 128] = [1; 128];
 
 fn uart_get8() -> u8 {
@@ -174,11 +174,17 @@ fn wrmsr64() {
 fn loadbin() {
     let len = uart_get32();
     let checksum = uart_get8();
-    let mut sum = 0;
+    let mut sum:u8 = 0;
 
     for i in 0..len {
         let c = uart_get8();
-        unsafe { core::ptr::write_volatile((LOADBIN_BASE + i) as *mut u8, c) };
+        unsafe {
+            *((LOADBIN_BASE + i) as *mut u8) = c;
+        };
+    }
+
+    for i in 0..len {
+        let c = unsafe { *((LOADBIN_BASE + i) as *const u8) };
         sum ^= c;
     }
 
@@ -192,9 +198,7 @@ fn loadbin() {
 #[inline(never)]
 pub unsafe extern "C" fn runbin() {
     //let entry = unsafe { core::mem::transmute::<u32, fn()->u32>(LOADBIN_BASE) };
-    let entry = unsafe {
-        core::mem::transmute::<u32, unsafe extern "C" fn() -> u32>(LOADBIN_BASE)
-    };
+    let entry = unsafe { core::mem::transmute::<u32, unsafe extern "C" fn() -> u32>(LOADBIN_BASE) };
     x86::fence::mfence();
     unsafe { uart_put32(*(LOADBIN_BASE as *const u32)) };
     let v = unsafe { entry() };

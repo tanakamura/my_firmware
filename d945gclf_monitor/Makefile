@@ -5,14 +5,14 @@ ASFLAGS=-32
 
 OBJS=init.o cache.o print.o
 rom: rlib $(OBJS) link.lds
-	ld -T link.lds $(OBJS) r/target/i686-unknown-linux-gnu/release/libr.a -o $@ -Map rom.map
+	ld -T link.lds $(OBJS) r/target/i686-firmware/release/libr.a -o $@ -Map rom.map
 
 OBJS_QEMU=qemu_init.o cache.o print.o
 rom_qemu: rlib $(OBJS_QEMU) link.lds
-	ld -T link.lds $(OBJS_QEMU) r/target/i686-unknown-linux-gnu/release/libr.a -o $@ -Map rom_qemu.map
+	ld -T link.lds $(OBJS_QEMU) r/target/i686-firmware/release/libr.a -o $@ -Map rom_qemu.map
 
 rlib:
-	cd r/; RUSTFLAGS="-C target-feature=-sse -C relocation-model=static" cargo build --release --target=i686-unknown-linux-gnu
+	cd r/; RUSTFLAGS="-C relocation-model=static" cargo build --release
 .POHNY: rlib
 
 clean:

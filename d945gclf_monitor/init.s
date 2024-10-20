@@ -54,6 +54,15 @@ init32:
 	mov	%ax, %fs
 	mov	%ax, %ss
 
+	# PCIEXBAR = 0xe0000000 and 128MB
+	mov	$0xf0000003, %ecx
+	pci_write_config32 0x00, 0x00, 0x00, 0x48
+
+	# BIOS_CNTL, enable xip prefetch
+	mov	$(2<<2), %ecx
+	pci_write_config8 0x00, 0x1f, 0x00, 0xdc
+
+
 init_lpc:
 	// enable superio & coma
 	mov $((1<<12)|(1<<0)), %cx

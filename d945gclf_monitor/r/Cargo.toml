@@ -13,5 +13,5 @@ crate-type = ["staticlib"] # Creates static lib
 panic = "abort"
 opt-level = "z"
 
-[target.i686-unknown-linux-gnu]
-rustflags = ["-Crelocation-model=static"]
+[profile.dev]
+panic = "abort"
