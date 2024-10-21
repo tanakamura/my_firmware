@@ -42,18 +42,37 @@ def main():
     pci_config_write16(m, 0, 0x1f, 3, 4, 1) # Enable IO access
     pci_config_write32(m, 0, 0x1f, 3, 0x20, SMBASE) # bar = 0x80000000
     pci_config_write8(m, 0, 0x1f, 3, 0x40, 1) # enable smbus
+    outb(m, SMBASE+HST_CNT, 0x0)
+
+    def write_byte(m, slv_addr, addr, data):
+        # reset
+        outb(m, SMBASE+HST_STS, 0xff)
+
+        outb(m, SMBASE+XMIT_SLVA, (slv_addr<<1)|0) # write to 0x36
+        outb(m, SMBASE+HST_CMD, addr)           # read addr
+        outb(m, SMBASE+HST_D0, data)            #
+        outb(m, SMBASE+HST_CNT, (2<<2)|(1<<6)) # write byte
+
+        done = False
+        for i in range(128):
+            d = inb(m, SMBASE+HST_STS)
+            print(f"{d:x}")
+            if d & HST_STS_INTR:
+                done = True
+                break
+
+        if not done:
+            print(hex(d))
+            raise(Exception("unko"))
+
+        return
 
     def read_byte(m, addr):
         # reset
-
-        outb(m, SMBASE+HST_CNT, 0x0)
         outb(m, SMBASE+HST_STS, 0xff)
 
-        outb(m, SMBASE+HST_CNT, 2<<2)          # read
         outb(m, SMBASE+XMIT_SLVA, (0x50<<1)|1) # read from 0x50
         outb(m, SMBASE+HST_CMD, addr)           # read addr
-        outb(m, SMBASE+HST_D0, 0)              # clear
-        outb(m, SMBASE+HST_D1, 0)              # clear
         outb(m, SMBASE+HST_CNT, (2<<2)|(1<<6))
 
         done = False

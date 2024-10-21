@@ -1,0 +1,7 @@
+
+
+[build]
+target = "i686-firmware.json"
+
+[unstable]
+build-std = ["core"]
