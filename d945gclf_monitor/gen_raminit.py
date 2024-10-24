@@ -1,4 +1,5 @@
 import sys
+import struct
 
 MCH_BASE = 0xfed10000
 PCI_CONFIG_BASE = 0xf0000000
@@ -6,23 +7,43 @@ PCI_CONFIG_BASE = 0xf0000000
 def main():
     outf = sys.argv[1]
     inf = sys.argv[2]
+    mode = sys.argv[3]
 
     outf = open(outf, "w")
     inf = open(inf, "r")
 
-    def read8(addr):
-        print(f"core::ptr::read_volatile(0x{addr:08x} as *const u8);", file=outf)
-    def read16(addr):
-        print(f"core::ptr::read_volatile(0x{addr:08x} as *const u16);", file=outf)
-    def read32(addr):
-        print(f"core::ptr::read_volatile(0x{addr:08x} as *const u32);", file=outf)
+    if mode == "asm":
+        def read8(addr):
+            print(f"movb 0x{addr:08x}, %al", file=outf)
+        def read16(addr):
+            print(f"movw 0x{addr:08x}, %ax", file=outf)
+        def read32(addr):
+            print(f"movl 0x{addr:08x}, %eax", file=outf)
 
-    def write8(addr, val):
-        print(f"core::ptr::write_volatile(0x{addr:08x} as *mut u8, 0x{val:08x});", file=outf)
-    def write16(addr, val):
-        print(f"core::ptr::write_volatile(0x{addr:08x} as *mut u16, 0x{val:08x});", file=outf)
-    def write32(addr, val):
-        print(f"core::ptr::write_volatile(0x{addr:08x} as *mut u32, 0x{val:08x});", file=outf)
+
+        def write8(addr, val):
+            print(f"movb $0x{val:02x}, %al", file=outf)
+            print(f"movb %al, 0x{addr:08x}", file=outf)
+        def write16(addr, val):
+            print(f"movw $0x{val:04x}, %ax", file=outf)
+            print(f"movw %ax, 0x{addr:08x}", file=outf)
+        def write32(addr, val):
+            print(f"movl $0x{val:08x}, %eax", file=outf)
+            print(f"movl %eax, 0x{addr:08x}", file=outf)
+    else:
+        def read8(addr):
+            print(f"core::ptr::read_volatile(0x{addr:08x} as *const u8);", file=outf)
+        def read16(addr):
+            print(f"core::ptr::read_volatile(0x{addr:08x} as *const u16);", file=outf)
+        def read32(addr):
+            print(f"core::ptr::read_volatile(0x{addr:08x} as *const u32);", file=outf)
+
+        def write8(addr, val):
+            print(f"core::ptr::write_volatile(0x{addr:08x} as *mut u8, 0x{val:08x});", file=outf)
+        def write16(addr, val):
+            print(f"core::ptr::write_volatile(0x{addr:08x} as *mut u16, 0x{val:08x});", file=outf)
+        def write32(addr, val):
+            print(f"core::ptr::write_volatile(0x{addr:08x} as *mut u32, 0x{val:08x});", file=outf)
 
 
     print(f"// set MCH_BASE to 0x{MCH_BASE:08x}", file=outf)

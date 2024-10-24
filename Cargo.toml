@@ -1,0 +1,14 @@
+[workspace]
+
+resolver = "2"
+
+members = [
+  "d945gclf_sdram"
+]
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+
+[profile.dev]
+panic = "abort"
