@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <memory>
+#include <sys/stat.h>
 #include <sys/ioctl.h>
 
 struct VM;
@@ -49,6 +50,7 @@ struct VM {
     int vm_fd;
     unsigned char *rom, *car;
     std::unique_ptr<CPU> cpu;
+    size_t rom_size;
 
     VM(const char *rom_path) {
         kvm_fd = open("/dev/kvm", O_RDWR);
@@ -56,13 +58,21 @@ struct VM {
             perror("/dev/kvm");
             exit(1);
         }
+        struct stat st;
+        int r = stat(rom_path, &st);
+        if (r < 0) {
+            perror(rom_path);
+            exit(1);
+        }
+
+        rom_size = st.st_size;
 
         int rom_image = open(rom_path, O_RDONLY);
         if (rom_image < 0) {
             perror(rom_path);
             exit(1);
         }
-        rom = (unsigned char *)mmap(0, 512 * 1024, PROT_READ | PROT_WRITE,
+        rom = (unsigned char *)mmap(0, rom_size, PROT_READ | PROT_WRITE,
                                     MAP_PRIVATE, rom_image, 0);
         if (rom == MAP_FAILED) {
             perror("mmap");
@@ -74,10 +84,10 @@ struct VM {
         struct kvm_userspace_memory_region mem = {0};
         mem.slot = 0;
         mem.flags = 0;
-        mem.guest_phys_addr = (1ULL<<32)-(512*1024);
-        mem.memory_size = 512 * 1024;
+        mem.guest_phys_addr = (1ULL<<32)-rom_size;
+        mem.memory_size = rom_size;
         mem.userspace_addr = (__u64)rom;
-        int r = ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem, NULL);
+        r = ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem, NULL);
         if (r < 0) {
             perror("kvm set user memory region");
             exit(1);
@@ -117,7 +127,7 @@ struct VM {
     ~VM() {
         close(vm_fd);
         close(kvm_fd);
-        munmap(rom, 512 * 1024);
+        munmap(rom, rom_size);
         free(car);
     }
 };

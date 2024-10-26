@@ -5,7 +5,10 @@ void disasm(const VM *vm) {
     auto &regs = vm->cpu->regs;
     auto rom = vm->rom;
 
-    auto rom_start = (1ULL<<32) - 512*1024;
+    printf("rip=%x, cs=%x, ds=%x ss=%x flags=%08x\n", (int)regs.rip,
+           (int)sregs.cs.base, (int)sregs.ds.base, (int)sregs.ss.base, (int)regs.rflags);
+
+    auto rom_start = (1ULL<<32) - 256*1024;
     auto pc = regs.rip + sregs.cs.base;
     auto rom_offset = pc - rom_start;
     unsigned char *code = &rom[rom_offset];
@@ -28,8 +31,6 @@ void disasm(const VM *vm) {
         fflush(stdout);
     }
 
-    printf("rip=%x, cs=%x, ds=%x ss=%x flags=%08x\n", (int)regs.rip,
-           (int)sregs.cs.base, (int)sregs.ds.base, (int)sregs.ss.base, (int)regs.rflags);
 
     fflush(stdout);
 }
