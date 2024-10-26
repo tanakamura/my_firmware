@@ -121,6 +121,18 @@ struct VM {
             exit(1);
         }
 
+        struct kvm_userspace_memory_region mem_rom16 = {0};
+        mem.slot = 3;
+        mem.flags = 0;
+        mem.guest_phys_addr = 1*1024*1024 - 16*1024;
+        mem.memory_size = 16 * 1024;
+        mem.userspace_addr = (__u64)(rom + rom_size - 16*1024);
+        r = ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem, NULL);
+        if (r < 0) {
+            perror("kvm set user memory region");
+            exit(1);
+        }
+
         cpu = std::make_unique<CPU>(kvm_fd, vm_fd);
     }
 

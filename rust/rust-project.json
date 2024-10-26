@@ -1,0 +1,5 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "d945gclf_smbus/r/Cargo.toml"
+    ]
+}

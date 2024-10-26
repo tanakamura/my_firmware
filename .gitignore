@@ -2,3 +2,8 @@
 *~
 rom
 *.map
+*.bin
+a.out
+compile_commands.json
+*.rom
+

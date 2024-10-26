@@ -10,7 +10,7 @@ pub fn panic(_: &PanicInfo) -> ! {
 
 #[no_mangle]
 pub unsafe extern "C" fn rmain() {
-    raminit::raminit();
+    //raminit::raminit();
     console::console_loop();
 }
 

@@ -14,8 +14,8 @@
   },
   "target-pointer-width": "32",
   "disable-redzone": true,
-    "features": "-mmx,-sse",
-    "position-independent-executables": false,
-    "relocation-model": "static",
-    "panic-strategy": "abort"
+  "features": "-mmx,-sse",
+  "position-independent-executables": false,
+  "relocation-model": "static",
+  "panic-strategy": "abort"
 }

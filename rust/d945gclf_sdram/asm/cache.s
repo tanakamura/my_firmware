@@ -46,6 +46,7 @@ enable_car:
 	.type enable_sdram_cache, @function
 
 enable_sdram_cache:
+
 	## disable cache
 	mov	%cr0, %eax
 	or	$0x60000000, %eax

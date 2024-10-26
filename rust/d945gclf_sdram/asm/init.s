@@ -120,11 +120,15 @@ init_uart:
 	jmp	enable_car
 1:
 
+	mov	$'.', %al
+	mov	$0x3f8, %dx
+	outb	%al, %dx
+
 	mov	$1f, %ebp
 	jmp	raminit
-
 1:
-	movl	$0x80000000, %esp # 2GiB
+
+	movl	$0x70000000, %esp # 2GiB-256M (GPU RAM)
 
 	call	enable_sdram_cache
 

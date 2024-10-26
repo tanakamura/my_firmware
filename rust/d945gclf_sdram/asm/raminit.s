@@ -1,7 +1,46 @@
 	.text
 	.globl	raminit
 	.type raminit, @function
+
+	.equ PMCON2, 0xa2
+	.equ PMCON3, 0xa4
+
+	.equ D31F0_BASE, (0<<20) | (31<<15) | (0<<12)
+	.equ PMCON2_ADDR, (0xF0000000 + D31F0_BASE + PMCON2)
+	.equ PMCON3_ADDR, (0xF0000000 + D31F0_BASE + PMCON3)
+
 raminit:
+	mov	$'A', %al
+	mov	$0x3f8, %dx
+	outb	%al, %dx
+
+	mov	PMCON2_ADDR, %eax
+	test	$(1<<2), %eax
+	jz	test_ok
+
+	## restart
+	mov	%eax, PMCON2_ADDR
+	mov	PMCON3_ADDR, %eax
+	or	$(1<<3), %eax
+	mov	%eax, PMCON3_ADDR
+
+	mov	$'B', %al
+	mov	$0x3f8, %dx
+	outb	%al, %dx
+
+	mov	$0xa, %eax
+	mov	$0xcf9, %edx
+	outb	%al, %dx
+	mov	$0xe, %eax
+	outb	%al, %dx
+
+2:
+	jmp	2b
+
+test_ok:
+	mov	$'C', %al
+	mov	$0x3f8, %dx
+	outb	%al, %dx
 
 // set MCH_BASE to 0xfed10000
 movl $0xfed10001, %eax
