@@ -1,0 +1,11 @@
+[package]
+name = "sdram_helloworld"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+x86 = "0.52.0"
+
+[build-dependencies]
+cc = "1.1.31"

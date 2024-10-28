@@ -30,34 +30,6 @@ fn uart_get32() -> u32 {
     v |= (uart_get8() as u32) << 24;
     return v;
 }
-fn uart_get16() -> u16 {
-    let mut v: u16 = 0;
-    v |= uart_get8() as u16;
-    v |= (uart_get8() as u16) << 8;
-    return v;
-}
-
-fn uart_put8(c: u8) {
-    loop {
-        unsafe {
-            if (inb(UART_LSR) & (1 << 5)) != 0 {
-                /* (1<<5) : THRE */
-                outb(UART_DATA, c);
-                return;
-            }
-        }
-    }
-}
-fn uart_put16(c: u16) {
-    uart_put8((c >> 0) as u8);
-    uart_put8((c >> 8) as u8);
-}
-fn uart_put32(c: u32) {
-    uart_put8((c >> 0) as u8);
-    uart_put8((c >> 8) as u8);
-    uart_put8((c >> 16) as u8);
-    uart_put8((c >> 24) as u8);
-}
 
 fn putchar(c: u8) {
     loop {
@@ -104,8 +76,9 @@ pub extern "C" fn rmain() -> ! {
         } else {
             uart_puts("Checksum OK");
             let entry_fn: extern "C" fn() -> i32 = unsafe { core::mem::transmute(0x10000000) };
-            let ret = entry_fn();
+            let _ret = entry_fn();
             uart_puts("Program returned");
         }
     }
 }
+

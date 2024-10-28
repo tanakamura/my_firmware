@@ -8,13 +8,11 @@
   "os": "none",
   "pre-link-args": {
     "ld": [
-      "-T", "link.lds",
-      "-Map", "all.map"
     ]
   },
   "target-pointer-width": "32",
   "disable-redzone": true,
-  "features": "-mmx,-sse",
+  "features": "-mmx,-sse,+soft-float",
   "position-independent-executables": false,
   "relocation-model": "static",
   "panic-strategy": "abort"

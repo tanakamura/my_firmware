@@ -60,7 +60,7 @@ enable_sdram_cache:
 	mov	$0x2ff, %ecx
 	wrmsr
 
-	## wb : 0x0000_0000 - 0x7fffffff
+	## wb : 0x0000_0000 - 0x7fffffff (SDRAM)
 	xor	%edx, %edx
 	mov	$0x00000006, %eax #base = 0, type = 6
 	mov	$0x200, %ecx 	# mtrr base
@@ -68,6 +68,16 @@ enable_sdram_cache:
 	mov	$(0x80000000 | (1<<11)), %eax # size = 0x80000000 (2GiB), valid=1
 	mov	$0x201, %ecx	# mtrr mask
 	wrmsr
+
+	## wb : 0xfffc0000 - 0xffffffff (SPI Flash)
+	xor	%edx, %edx
+	mov	$0xfffc0006, %eax
+	mov	$0x202, %ecx 	# mtrr base
+	wrmsr
+	mov	$(0xfffc0000 | (1<<11)), %eax
+	mov	$0x203, %ecx	# mtrr mask
+	wrmsr
+
 
 	## enable cache
 	mov	%cr0, %eax

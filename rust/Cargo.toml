@@ -1,10 +1,11 @@
 [workspace]
-
 resolver = "2"
 
 members = [
-  "d945gclf_sdram"
+  "d945gclf_sdram",
+  "sdram_helloworld",
 ]
+build = "build.rs"
 
 [profile.release]
 panic = "abort"
@@ -12,3 +13,4 @@ opt-level = "z"
 
 [profile.dev]
 panic = "abort"
+

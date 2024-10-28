@@ -1,6 +1,7 @@
 import serial
 import sys
 import struct
+import time
 
 
 def main():
@@ -18,7 +19,10 @@ def main():
 
     sum_bytes = struct.pack("<B", sum)
     port.write(sum_bytes)
-    port.write(bytes)
+    for b in bytes:
+        port.write(b.to_bytes(1, byteorder='big'))
+        time.sleep(0.00001)
+    #port.write(bytes)
 
 
 if __name__ == "__main__":

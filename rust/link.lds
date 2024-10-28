@@ -1,5 +1,6 @@
 OUTPUT_ARCH("i386")
 OUTPUT_FORMAT("binary")
+ENTRY(reset)
 
 ROM_SIZE = 256K;
 INIT16_SIZE = 128;
@@ -33,8 +34,6 @@ SECTIONS {
                KEEP(*(.reset16))
                . = ALIGN(16);
          } > INIT16 AT > ROM
-
-         ref_reset = reset;
 
          /DISCARD/ : { *(*) }
 }
