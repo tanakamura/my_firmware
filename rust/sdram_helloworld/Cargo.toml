@@ -5,6 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
+rlibc = "1.0.0"
 x86 = "0.52.0"
 
 [build-dependencies]

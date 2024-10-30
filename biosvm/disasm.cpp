@@ -1,17 +1,25 @@
 #include "vm.hpp"
 
-void disasm(const VM *vm) {
+void disasm(const VM *vm, int mode) {
     auto &sregs = vm->cpu->sregs;
     auto &regs = vm->cpu->regs;
-    auto rom = vm->rom;
 
-    printf("rip=%x, cs=%x, ds=%x ss=%x flags=%08x\n", (int)regs.rip,
-           (int)sregs.cs.base, (int)sregs.ds.base, (int)sregs.ss.base, (int)regs.rflags);
+    printf("rip=%x, rsp=%x flags=%08x\n", (int)regs.rip,
+           (int)regs.rsp,
+           (int)regs.rflags);
 
-    auto rom_start = (1ULL<<32) - 256*1024;
+    unsigned char *code;
+
     auto pc = regs.rip + sregs.cs.base;
-    auto rom_offset = pc - rom_start;
-    unsigned char *code = &rom[rom_offset];
+
+    if (mode == MODE_SPIFLASH) {
+        auto rom_start = (1ULL<<32) - 256*1024;
+        auto rom_offset = pc - rom_start;
+        code = &vm->rom[rom_offset];
+    } else if (mode == MODE_SDRAM) {
+        auto pc = regs.rip + sregs.cs.base;
+        code = &vm->sdram[pc];
+    }
     if (code[0] == 0xf3 && code[1] == 0xa4) {
         puts("rep movsb");
     } else if (code[0] == 0xf3 && code[1] == 0xa5) {
@@ -20,7 +28,7 @@ void disasm(const VM *vm) {
         puts("rep stosw");
     } else {
         FILE *fp = fopen("out.bin", "wb");
-        fwrite(&rom[rom_offset], 1, 16, fp);
+        fwrite(code, 1, 16, fp);
         fclose(fp);
 
         fflush(stdout);

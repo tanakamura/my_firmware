@@ -8,6 +8,7 @@ use x86::time::rdtsc;
 mod uart;
 
 use core::panic::PanicInfo;
+use core::arch::asm;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -20,18 +21,30 @@ fn now() -> f64 {
     t as f64 / 1.6e9
 }
 
+pub unsafe fn cr0() -> Cr0 {
+    let ret: usize;
+    asm!("mov %cr0, {0}", out(reg) ret, options(att_syntax));
+    Cr0::from_bits_unchecked(ret)
+}
+
+pub unsafe fn cr4() -> Cr4 {
+    let ret: usize;
+    asm!("mov %cr4, {0}", out(reg) ret, options(att_syntax));
+    Cr4::from_bits_unchecked(ret)
+}
+
 #[link_section = ".text.start"]
 #[no_mangle]
 extern "C" fn _start() -> i32 {
     // enable sse
-    let mut cr0 = unsafe { x86::controlregs::cr0() };
+    let mut cr0 = unsafe { cr0() };
     cr0 = cr0 - Cr0::CR0_EMULATE_COPROCESSOR;
     cr0 = cr0 | Cr0::CR0_MONITOR_COPROCESSOR;
     unsafe {
         x86::controlregs::cr0_write(cr0);
     }
 
-    let mut cr4 = unsafe { x86::controlregs::cr4() };
+    let mut cr4 = unsafe { cr4() };
     cr4 = cr4 | Cr4::CR4_ENABLE_SSE | Cr4::CR4_UNMASKED_SSE;
     unsafe {
         x86::controlregs::cr4_write(cr4);

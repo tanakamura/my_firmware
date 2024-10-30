@@ -2,6 +2,7 @@
 #include "vm.hpp"
 
 static void handle_exit_hlt(CPU *cpu) {
+    dump_regs(cpu);
     puts("hlt");
     exit(1);
 }
@@ -9,11 +10,13 @@ static void handle_exit_hlt(CPU *cpu) {
 void CPU::setup() {}
 
 void run(VM *vm, Connection *conn) {
+    vm->cpu->restore_regs_to_vm();
     if (0) {  // single step
         struct kvm_guest_debug single_step = {};
         single_step.control = KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP;
         ioctl(vm->cpu->vcpu_fd, KVM_SET_GUEST_DEBUG, &single_step);
-        disasm(vm);
+        disasm(vm, vm->mode);
+        // dump_regs(vm->cpu.get());
     }
     asm volatile("" ::: "memory");
     int r = ioctl(vm->cpu->vcpu_fd, KVM_RUN, NULL);
@@ -35,6 +38,7 @@ void run(VM *vm, Connection *conn) {
             break;
 
         case KVM_EXIT_INTERNAL_ERROR:
+            dump_regs(vm->cpu.get());
             printf("exit internal error : %d [",
                    (int)run_data->internal.suberror);
             exit(1);
@@ -159,93 +163,118 @@ void run(VM *vm, Connection *conn) {
         case KVM_EXIT_DEBUG:
             break;
         case KVM_EXIT_IO: {
-            uintptr_t dp = ((uintptr_t)run_data) + run_data->io.data_offset;
-            if (run_data->io.direction == KVM_EXIT_IO_IN) {
-                uint32_t inv = 0;
-                printf("io_in%d port=0x%04x, val=", run_data->io.size * 8,
-                       run_data->io.port);
-                fflush(stdout);
-                switch (run_data->io.size) {
-                    case 4:
-                        inv = *(uint32_t *)dp = conn->in32(run_data->io.port);
-                        if (record) {
-                            fprintf(stderr, "IL,%08x,%08x\n",
-                                    ((int)run_data->io.port), inv);
-                        }
-                        break;
-                    case 2:
-                        inv = *(uint16_t *)dp = conn->in16(run_data->io.port);
-                        if (record) {
-                            fprintf(stderr, "IH,%08x,%08x\n",
-                                    ((int)run_data->io.port), inv);
-                        }
-                        break;
-                    case 1:
-                        inv = *(uint8_t *)dp = conn->in8(run_data->io.port);
-                        if (record) {
-                            fprintf(stderr, "IB,%08x,%08x\n",
-                                    ((int)run_data->io.port), inv);
-                        }
-                        break;
+            if (vm->mode == MODE_SPIFLASH) {
+                uintptr_t dp = ((uintptr_t)run_data) + run_data->io.data_offset;
+                if (run_data->io.direction == KVM_EXIT_IO_IN) {
+                    uint32_t inv = 0;
+                    printf("io_in%d port=0x%04x, val=", run_data->io.size * 8,
+                           run_data->io.port);
+                    fflush(stdout);
+                    switch (run_data->io.size) {
+                        case 4:
+                            inv = *(uint32_t *)dp =
+                                conn->in32(run_data->io.port);
+                            if (record) {
+                                fprintf(stderr, "IL,%08x,%08x\n",
+                                        ((int)run_data->io.port), inv);
+                            }
+                            break;
+                        case 2:
+                            inv = *(uint16_t *)dp =
+                                conn->in16(run_data->io.port);
+                            if (record) {
+                                fprintf(stderr, "IH,%08x,%08x\n",
+                                        ((int)run_data->io.port), inv);
+                            }
+                            break;
+                        case 1:
+                            inv = *(uint8_t *)dp = conn->in8(run_data->io.port);
+                            if (record) {
+                                fprintf(stderr, "IB,%08x,%08x\n",
+                                        ((int)run_data->io.port), inv);
+                            }
+                            break;
 
-                    default:
-                        puts("unknown io");
-                        exit(1);
+                        default:
+                            puts("unknown io");
+                            exit(1);
+                    }
+                    printf("0x%08x\n", (int)inv);
+                } else {
+                    switch (run_data->io.size) {
+                        case 4:
+                            if (show) {
+                                printf("io_out32 port=0x%04x val=0x%08x\n",
+                                       run_data->io.port, *(uint32_t *)dp);
+                            }
+                            if (record) {
+                                fprintf(stderr, "OL,%08x,%08x\n",
+                                        ((int)run_data->io.port),
+                                        *(uint32_t *)dp);
+                            }
+                            conn->out32(run_data->io.port, *(uint32_t *)dp);
+                            break;
+
+                        case 2:
+                            if (show) {
+                                printf("io_out16 port=0x%04x val=0x%08x\n",
+                                       run_data->io.port, *(uint16_t *)dp);
+                            }
+                            if (record) {
+                                fprintf(stderr, "OH,%08x,%08x\n",
+                                        ((int)run_data->io.port),
+                                        *(uint16_t *)dp);
+                            }
+
+                            conn->out16(run_data->io.port, *(uint16_t *)dp);
+                            break;
+
+                        case 1:
+                            if (show) {
+                                printf(
+                                    "io_out8 pc=%08x, sp=%08x, port=0x%04x "
+                                    "val=0x%08x\n",
+                                    (int)vm->cpu->regs.rip,
+                                    (int)vm->cpu->regs.rsp, run_data->io.port,
+                                    *(uint8_t *)dp);
+                            }
+                            if (record) {
+                                fprintf(stderr, "OB,%08x,%08x\n",
+                                        ((int)run_data->io.port),
+                                        *(uint8_t *)dp);
+                            }
+                            if (run_data->io.port == 0x3f8) {
+                                putchar(*(uint8_t *)dp);
+                            } else if (run_data->io.port == 0x2e ||
+                                       run_data->io.port == 0x2f ||
+                                       ((run_data->io.port & 0x3f0) == 0x3f0)) {
+                                /* skip superio */
+                            } else {
+                                conn->out8(run_data->io.port, *(uint8_t *)dp);
+                            }
+                            break;
+
+                        default:
+                            puts("unknown io");
+                            exit(1);
+                    }
                 }
-                printf("0x%08x\n", (int)inv);
             } else {
-                switch (run_data->io.size) {
-                    case 4:
-                        if (show) {
-                            printf("io_out32 port=0x%04x val=0x%08x\n",
-                                   run_data->io.port, *(uint32_t *)dp);
-                        }
-                        if (record) {
-                            fprintf(stderr, "OL,%08x,%08x\n",
-                                    ((int)run_data->io.port), *(uint32_t *)dp);
-                        }
-                        conn->out32(run_data->io.port, *(uint32_t *)dp);
-                        break;
-
-                    case 2:
-                        if (show) {
-                            printf("io_out16 port=0x%04x val=0x%08x\n",
-                                   run_data->io.port, *(uint16_t *)dp);
-                        }
-                        if (record) {
-                            fprintf(stderr, "OH,%08x,%08x\n",
-                                    ((int)run_data->io.port), *(uint16_t *)dp);
-                        }
-
-                        conn->out16(run_data->io.port, *(uint16_t *)dp);
-                        break;
-
-                    case 1:
-                        if (show) {
-                            printf(
-                                "io_out8 pc=%08x, sp=%08x, port=0x%04x "
-                                "val=0x%08x\n",
-                                (int)vm->cpu->regs.rip, (int)vm->cpu->regs.rsp,
-                                run_data->io.port, *(uint8_t *)dp);
-                        }
-                        if (record) {
-                            fprintf(stderr, "OB,%08x,%08x\n",
-                                    ((int)run_data->io.port), *(uint8_t *)dp);
-                        }
-                        if (run_data->io.port == 0x3f8) {
-                            putchar(*(uint8_t *)dp);
-                        } else if (run_data->io.port == 0x2e ||
-                                   run_data->io.port == 0x2f ||
-                                   ((run_data->io.port & 0x3f0) == 0x3f0)) {
-                            /* skip superio */
-                        } else {
-                            conn->out8(run_data->io.port, *(uint8_t *)dp);
-                        }
-                        break;
-
-                    default:
-                        puts("unknown io");
-                        exit(1);
+                uintptr_t dp = ((uintptr_t)run_data) + run_data->io.data_offset;
+                if (run_data->io.direction == KVM_EXIT_IO_IN) {
+                    if (run_data->io.port == 0x3fd) {
+                        *(uint8_t *)dp = (1<<5);
+                    } else {
+                        fprintf(stderr, "unknown io_in port=0x%04x\n",
+                                run_data->io.port);
+                    }
+                } else {
+                    if (run_data->io.port == 0x3f8) {
+                        putchar(*(uint8_t *)dp);
+                    } else {
+                        fprintf(stderr, "unknown io_out port=0x%04x\n",
+                                run_data->io.port);
+                    }
                 }
             }
         } break;
