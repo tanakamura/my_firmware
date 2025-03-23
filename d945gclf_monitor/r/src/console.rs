@@ -195,16 +195,6 @@ fn loadbin() {
     }
 }
 
-#[inline(never)]
-pub unsafe extern "C" fn runbin() {
-    //let entry = unsafe { core::mem::transmute::<u32, fn()->u32>(LOADBIN_BASE) };
-    let entry = unsafe { core::mem::transmute::<u32, unsafe extern "C" fn() -> u32>(LOADBIN_BASE) };
-    x86::fence::mfence();
-    unsafe { uart_put32(*(LOADBIN_BASE as *const u32)) };
-    let v = unsafe { entry() };
-    unsafe { uart_put32(v) };
-}
-
 pub fn console_loop() {
     loop {
         let c = uart_get8();

@@ -103,7 +103,7 @@ init_uart:
 	mov	$UART_LCR, %dx
 	outb	%al, %dx
 
-	# divider = 1
+	# divider = 1, 115200
 	mov	$UART_DIV_LO, %dx
 	mov	$0x1, %al
 	outb	%al, %dx
@@ -120,10 +120,6 @@ init_uart:
 	jmp	enable_car
 1:
 
-	mov	$'.', %al
-	mov	$0x3f8, %dx
-	outb	%al, %dx
-
 	mov	$1f, %ebp
 	jmp	raminit
 1:
@@ -131,6 +127,16 @@ init_uart:
 	movl	$0x70000000, %esp # 2GiB-256M (GPU RAM)
 
 	call	enable_sdram_cache
+
+	# enable fpu, sse
+	mov	%cr0, %eax
+	and	$~(1<<2), %eax	# ~emulate coprocessor
+	or	$(1<<1), %eax	# monitor coprocessor
+	mov	%eax, %cr0
+
+	mov	%cr4, %eax
+	or	$((1<<9)|(1<<10)), %eax # enable sse
+	mov	%eax, %cr4
 
 	call	rmain
 
@@ -144,9 +150,16 @@ init_uart:
 	.section .rodata, "a"
 	.align	16
 gdt_table:
-	.quad	0						   # selector[0x00]
-	.quad	((0xc)<<52) | (0xf<<48) | (0x93<<40) | (0xffff<<0) # selector[0x08] : full data access
-	.quad	((0xc)<<52) | (0xf<<48) | (0x9b<<40) | (0xffff<<0) # selector[0x10] : full text access
+	# selector[0x00]
+	.quad	0
+	# selector[0x08] : full data access
+	.quad	((0xc)<<52) | (0xf<<48) | (0x93<<40) | (0xffff<<0)
+	# selector[0x10] : full text access
+	.quad	((0xc)<<52) | (0xf<<48) | (0x9b<<40) | (0xffff<<0)
+	# selector[0x18] : initial cs compatible, base=0xf0000, limit=0xffff, 16bit, byte granularity
+	.quad	((0x0)<<52) | (0x0<<48) | (0x9b<<40) | (0xf0000<<16) | (0xffff<<0)
+	# selector[0x20] : initial ds compatible, base=0xf0000, limit=0xffff, 16bit, byte granularity
+	.quad	((0x0)<<52) | (0x0<<48) | (0x93<<40) | (0xf0000<<16) | (0xffff<<0) # selector[0x20] : initial ds compatible
 
 	.section	.text16, "ax"
 	.code16

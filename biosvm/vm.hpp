@@ -2,6 +2,7 @@
 #include <linux/kvm.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <functional>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -13,8 +14,11 @@
 struct VM;
 struct CPU;
 
+void install_int_handler_readlmode(VM *vm, std::function<void(VM *vm, CPU *cpu)> f, int num);
+
 static constexpr int MODE_SPIFLASH = 0;
 static constexpr int MODE_SDRAM = 1;
+static constexpr int MODE_OPTIONROM = 2;
 static constexpr size_t SDRAM_SIZE = 2 * 1024 * 1024 * 1024ULL;
 void dump_regs(const CPU *cpu);
 
@@ -60,6 +64,17 @@ struct CPU {
 
             regs.rip = 0x10000000;
             regs.rsp = 0x10000000 + SDRAM_SIZE - 8;
+
+        } else if (mode == MODE_OPTIONROM) {
+            sregs.cs.base = 0xc0000;
+            sregs.cs.selector = 0xc000;
+
+            sregs.ss.base = 0xf0000;
+            sregs.ss.selector = 0xf000;
+            sregs.ss.limit = 0xffff;
+
+            regs.rsp = 0;
+            regs.rip = 3;
         }
     }
 
@@ -84,8 +99,10 @@ struct VM {
     std::unique_ptr<CPU> cpu;
     size_t rom_size;
     int mode;
+    bool forward_to_uart = true;
+    std::function<void(VM*,CPU*)> int_handlers[256];
 
-    VM(const char *rom_path, int mode) : mode(mode) {
+    VM(const char *rom_path, int mode, bool forward_to_uart) : mode(mode), forward_to_uart(forward_to_uart) {
         kvm_fd = open("/dev/kvm", O_RDWR);
         if (kvm_fd < 0) {
             perror("/dev/kvm");
@@ -186,6 +203,26 @@ struct VM {
             memcpy(sdram, rom, rom_size);
             *(uint32_t *)(&sdram[0xfffff8]) =
                 SDRAM_SIZE - 4;  // ret to halt
+        } else if (mode == MODE_OPTIONROM) {
+            void *p;
+            posix_memalign(&p, 4096, 1024*1024);
+            sdram = (uint8_t *)p;
+
+            struct kvm_userspace_memory_region mem = {0};
+            mem.slot = 0;
+            mem.flags = 0;
+            mem.guest_phys_addr = 0x0;
+            mem.memory_size = 1024*1024;
+            mem.userspace_addr = (__u64)p;
+            r = ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem, NULL);
+            if (r < 0) {
+                perror("kvm set user memory region");
+                exit(1);
+            }
+            memset(sdram, 0xf4, 1024*1024);  // fill halt
+            memcpy(sdram+0xc0000, rom, rom_size);
+
+            install_int_handler_readlmode(this, [](VM*vm, CPU*cpu){ puts("int10");}, 0x10);
         }
 
         cpu = std::make_unique<CPU>(kvm_fd, vm_fd, mode);
@@ -197,9 +234,15 @@ struct VM {
         munmap(rom, rom_size);
         free(car);
     }
+
+    void emu_reti();
+    void emu_push16(uint16_t val);
+    void emu_far_ret();
+    void emu_far_call(uintptr_t cs, uintptr_t ip);
 };
 
 void disasm(const VM *vm, int mode);
 struct Connection;
 void run(VM *vm, Connection *conn);
 void dump_regs(const CPU *cpu);
+

@@ -4,6 +4,8 @@ resolver = "2"
 members = [
   "d945gclf_sdram",
   "sdram_helloworld",
+  "sdram_monitor",
+  "common",
 ]
 build = "build.rs"
 

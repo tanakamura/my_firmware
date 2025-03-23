@@ -7,20 +7,22 @@
 int main(int argc, char **argv) {
     int opt;
     int mode = MODE_SPIFLASH;
-    bool connect_to_realmachine = false;
+    bool forward_to_uart = false;
 
     while ((opt = getopt(argc, argv, "m:c")) != -1) {
         switch (opt) {
             case 'm':
                 if (strcmp(optarg, "sdram") == 0) {
                     mode = MODE_SDRAM;
+                } else if (strcmp(optarg, "optionrom") == 0) {
+                    mode = MODE_OPTIONROM;
                 } else {
                     printf("Invalid mode: %s\n", optarg);
                     return 1;
                 }
                 break;
             case 'c':
-                connect_to_realmachine = true;
+                forward_to_uart = true;
                 break;
         }
     }
@@ -30,10 +32,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    VM vm(argv[optind], mode);
+    VM vm(argv[optind], mode, forward_to_uart);
     Connection conn;
 
-    if (connect_to_realmachine) {
+    if (forward_to_uart) {
         conn.open_tty("/dev/ttyS0");
         conn.init();
     }

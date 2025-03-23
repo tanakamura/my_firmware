@@ -19,6 +19,9 @@ void disasm(const VM *vm, int mode) {
     } else if (mode == MODE_SDRAM) {
         auto pc = regs.rip + sregs.cs.base;
         code = &vm->sdram[pc];
+    } else if (mode == MODE_OPTIONROM) {
+        auto pc = regs.rip + sregs.cs.base;
+        code = &vm->sdram[pc];
     }
     if (code[0] == 0xf3 && code[1] == 0xa4) {
         puts("rep movsb");
@@ -32,7 +35,7 @@ void disasm(const VM *vm, int mode) {
         fclose(fp);
 
         fflush(stdout);
-        int r = system("ndisasm -b 32 out.bin|head -n2");
+        int r = system("ndisasm -b 16 out.bin|head -n2");
         if (r != 0) {
             exit(1);
         }

@@ -6,4 +6,6 @@ add_executable(vm
   disasm.cpp
   io.cpp
   dump.cpp
+  int_handler.cpp
+  vm.cpp
 )

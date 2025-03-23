@@ -1,10 +1,33 @@
 #include "io.hpp"
 #include "vm.hpp"
 
-static void handle_exit_hlt(CPU *cpu) {
-    dump_regs(cpu);
-    puts("hlt");
-    exit(1);
+static void handle_exit_hlt(VM *vm) {
+    if (vm->mode == MODE_OPTIONROM) {
+        if (vm->cpu->sregs.cs.base == 0xf0000) {
+            int int_num = vm->cpu->regs.rip-1;
+
+            if (int_num < 256) {
+                auto &handler = vm->int_handlers[int_num];
+                if (handler) {
+                    handler(vm, vm->cpu.get());
+                    vm->emu_reti();
+                } else {
+                    printf("uninstalled handler : int_num: %x\n", int_num);
+                    exit(1);
+                }
+            } else {
+                printf("int_num: %x\n", int_num);
+                exit(1);
+            }
+        } else {
+            puts("hlt");
+            exit(1);
+        }
+    } else {
+        dump_regs(vm->cpu.get());
+        puts("hlt");
+        exit(1);
+    }
 }
 
 void CPU::setup() {}
@@ -29,12 +52,12 @@ void run(VM *vm, Connection *conn) {
     vm->cpu->load_regs_from_vm();
 
     auto run_data = vm->cpu->run_data;
-    bool record = true;
+    bool record = false;
     bool show = true;
 
     switch (run_data->exit_reason) {
         case KVM_EXIT_HLT:
-            handle_exit_hlt(vm->cpu.get());
+            handle_exit_hlt(vm);
             break;
 
         case KVM_EXIT_INTERNAL_ERROR:
@@ -49,7 +72,6 @@ void run(VM *vm, Connection *conn) {
             if (run_data->mmio.is_write) {
                 switch (run_data->mmio.len) {
                     case 4:
-
                         if (record) {
                             fprintf(stderr, "WL,%08x,%08x\n",
                                     ((int)run_data->mmio.phys_addr),
@@ -163,7 +185,7 @@ void run(VM *vm, Connection *conn) {
         case KVM_EXIT_DEBUG:
             break;
         case KVM_EXIT_IO: {
-            if (vm->mode == MODE_SPIFLASH) {
+            if (vm->forward_to_uart) {
                 uintptr_t dp = ((uintptr_t)run_data) + run_data->io.data_offset;
                 if (run_data->io.direction == KVM_EXIT_IO_IN) {
                     uint32_t inv = 0;

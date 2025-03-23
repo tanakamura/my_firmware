@@ -24,6 +24,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "x86",
+]
+
+[[package]]
 name = "d945gclf_sdram"
 version = "0.1.0"
 dependencies = [
@@ -41,17 +48,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
-
-[[package]]
 name = "sdram_helloworld"
 version = "0.1.0"
 dependencies = [
  "cc",
- "rlibc",
+ "common",
+ "x86",
+]
+
+[[package]]
+name = "sdram_monitor"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "common",
  "x86",
 ]
 
