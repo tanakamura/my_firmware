@@ -54,6 +54,31 @@ init32:
 	mov	%ax, %fs
 	mov	%ax, %ss
 
+	mov	$0x510, %dx # select qemu signature
+	xor	%al, %al
+	outb	%al, %dx
+
+	mov	$0x511, %dx
+	inb	%dx, %al
+	cmpb	$'Q', %al
+	jne	not_qemu
+
+	inb	%dx, %al
+	cmpb	$'E', %al
+	jne	not_qemu
+
+	inb	%dx, %al
+	cmpb	 $'M', %al
+	jne	not_qemu
+
+	inb	%dx, %al
+	cmpb	$'U', %al
+	jne	not_qemu
+
+	# run in qemu, skip dram initialization
+	jmp	raminit_done
+
+not_qemu:
 	# PCIEXBAR = 0xf0000000 and 128MB
 	mov	$0xf0000003, %ecx
 	pci_write_config32 0x00, 0x00, 0x00, 0x48
@@ -123,6 +148,7 @@ init_uart:
 	mov	$1f, %ebp
 	jmp	raminit
 1:
+raminit_done:
 
 	movl	$0x70000000, %esp # 2GiB-256M (GPU RAM)
 
@@ -173,7 +199,7 @@ init:
 
 	.align	16
 gdt:
-	.word	(8*3)-1
+	.word	(8*5)-1
 	.long	gdt_table
 
 
