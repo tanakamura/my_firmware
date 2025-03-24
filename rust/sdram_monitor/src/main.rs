@@ -242,8 +242,8 @@ pub fn console_loop() {
     }
 }
 
-#[link_section = ".text.start"]
-#[no_mangle]
+#[unsafe(link_section = ".text.start")]
+#[unsafe(no_mangle)]
 extern "C" fn _start() -> i32 {
     console_loop();
     0

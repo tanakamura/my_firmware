@@ -6,14 +6,21 @@
   "llvm-target": "i686-unknown-none",
   "max-atomic-width": 64,
   "os": "none",
-  "pre-link-args": {
-    "ld": [
-    ]
-  },
   "target-pointer-width": "32",
   "disable-redzone": true,
   "features": "+sse",
   "position-independent-executables": false,
   "relocation-model": "static",
-  "panic-strategy": "abort"
+  "panic-strategy": "abort",
+
+  "pre-link-args": {
+    "gnu-cc": [
+      "-m32"
+    ],
+    "gnu-lld-cc": [
+      "-m32"
+    ]
+  }
+
 }
+

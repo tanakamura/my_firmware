@@ -55,7 +55,7 @@ pub extern "C" fn keep_syms() {
     init86::keep_syms();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rmain() -> ! {
     loop {
         uart_puts("Hello from SDRAM!!!");
