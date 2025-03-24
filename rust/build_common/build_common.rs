@@ -4,19 +4,20 @@ pub enum BuildType {
     BOOT,
 }
 
-pub fn build(build_type: BuildType, name: &str) {
-    match build_type {
+pub fn build(build_type: BuildType) {
+    let name = std::env::var("CARGO_PKG_NAME").unwrap();
+    println!("cargo::rustc-link-arg-bin={}=-Map={}.map", name, name);
+    let lds = match build_type {
         BuildType::BINARY => {
-            println!("cargo:rerun-if-changed=../sdram.lds");
-            println!("cargo::rustc-link-arg-bin={}=-T./sdram.lds", name);
-            println!("cargo::rustc-link-arg-bin={}=-Map={}.map", name, name);
             println!("cargo::rustc-link-arg-bin={}=-e_start", name);
+            "sdram.lds"
         }
         BuildType::BOOT => {
-            println!("cargo:rerun-if-changed=../link.lds");
-            println!("cargo::rustc-link-arg-bin={}=-T./link.lds", name);
-            println!("cargo::rustc-link-arg-bin={}=-Map={}.map", name, name);
             println!("cargo::rustc-link-arg-bin={}=-ereset", name);
+            "link.lds"
         }
-    }
+    };
+
+    println!("cargo:rerun-if-changed=../{}", lds);
+    println!("cargo::rustc-link-arg-bin={}=-T./{}", name, lds);
 }

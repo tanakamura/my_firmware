@@ -2,5 +2,5 @@
 mod build_common;
 
 fn main() {
-    build_common::build(build_common::BuildType::BOOT, "d945gclf_sdram");
+    build_common::build(build_common::BuildType::BOOT);
 }

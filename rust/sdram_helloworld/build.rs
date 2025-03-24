@@ -2,5 +2,5 @@
 mod build_common;
 
 fn main() {
-    build_common::build(build_common::BuildType::BINARY, "sdram_helloworld");
+    build_common::build(build_common::BuildType::BINARY);
 }
