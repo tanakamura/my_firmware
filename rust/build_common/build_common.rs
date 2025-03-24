@@ -6,7 +6,8 @@ pub enum BuildType {
 
 pub fn build(build_type: BuildType) {
     let name = std::env::var("CARGO_PKG_NAME").unwrap();
-    println!("cargo::rustc-link-arg-bin={}=-Map={}.map", name, name);
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+    println!("cargo::rustc-link-arg-bin={}=-Map={}/{}.map", name, out_dir, name);
     let lds = match build_type {
         BuildType::BINARY => {
             println!("cargo::rustc-link-arg-bin={}=-e_start", name);
