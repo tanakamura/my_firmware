@@ -1,10 +1,6 @@
-use std::io;
+#[path = "../build_common/build_common.rs"]
+mod build_common;
 
-fn main() -> io::Result<()> {
-    println!("cargo:rerun-if-changed=../link.lds");
-    println!("cargo::rustc-link-arg-bin=d945gclf_sdram=-T./link.lds");
-    println!("cargo::rustc-link-arg-bin=d945gclf_sdram=-Map=d945gclf_sdram.map");
-    println!("cargo::rustc-link-arg-bin=d945gclf_sdram=-ereset");
-
-    Ok(())
+fn main() {
+    build_common::build(build_common::BuildType::BOOT, "d945gclf_sdram");
 }

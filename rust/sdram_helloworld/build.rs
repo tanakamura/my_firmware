@@ -1,10 +1,6 @@
-use std::io;
+#[path = "../build_common/build_common.rs"]
+mod build_common;
 
-fn main() -> io::Result<()> {
-    println!("cargo:rerun-if-changed=../sdram.lds");
-    println!("cargo::rustc-link-arg-bin=sdram_helloworld=-T./sdram.lds");
-    println!("cargo::rustc-link-arg-bin=sdram_helloworld=-Map=sdram_helloworld.map");
-    println!("cargo::rustc-link-arg-bin=sdram_helloworld=-e_start");
-
-    Ok(())
+fn main() {
+    build_common::build(build_common::BuildType::BINARY, "sdram_helloworld");
 }
