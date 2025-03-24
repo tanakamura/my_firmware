@@ -1,10 +1,10 @@
 [package]
-name = "sdram_helloworld"
+name = "common"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
 
 [dependencies]
 x86 = "0.52.0"
-common = { path = "../common" }
 
+[lib]
+crate-type = ["lib"]

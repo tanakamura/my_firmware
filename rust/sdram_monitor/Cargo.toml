@@ -1,5 +1,5 @@
 [package]
-name = "sdram_helloworld"
+name = "sdram_monitor"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
@@ -8,3 +8,5 @@ build = "build.rs"
 x86 = "0.52.0"
 common = { path = "../common" }
 
+[build-dependencies]
+cc = "1.1.31"

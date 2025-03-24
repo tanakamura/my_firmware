@@ -6,8 +6,8 @@ members = [
   "sdram_helloworld",
   "sdram_monitor",
   "common",
+  "init86",
 ]
-build = "build.rs"
 
 [profile.release]
 panic = "abort"

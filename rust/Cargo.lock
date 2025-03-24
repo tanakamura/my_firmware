@@ -34,8 +34,15 @@ dependencies = [
 name = "d945gclf_sdram"
 version = "0.1.0"
 dependencies = [
- "cc",
+ "init86",
  "x86",
+]
+
+[[package]]
+name = "init86"
+version = "0.1.0"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
@@ -51,7 +58,6 @@ dependencies = [
 name = "sdram_helloworld"
 version = "0.1.0"
 dependencies = [
- "cc",
  "common",
  "x86",
 ]

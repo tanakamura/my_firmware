@@ -6,6 +6,5 @@ build = "build.rs"
 
 [dependencies]
 x86 = "0.52.0"
+init86 = { path = "../init86" }
 
-[build-dependencies]
-cc = "1.1.31"
