@@ -174,19 +174,6 @@ raminit_done:
 	.size	init32, .-init32
 
 
-	.bss
-save_area_switch_to_16:
-	.lcomm save_area_switch_to_16_ax, 4
-
-	.text
-	.globl	switch_to_16
-switch_to_16:
-	mov	%eax, save_area_switch_to_16_ax
-	mov	$0x20, %eax
-	mov	%ax, %ds
-	ljmp	$0x18,$switch_to_16_f0000_16bit
-	ret
-
 	.section .rodata, "a"
 	.align	16
 gdt_table:
@@ -210,9 +197,6 @@ init:
 	or	$1, %eax
 	mov	%eax, %cr0
 	ljmpl	$0x10,$init32
-
-switch_to_16_f0000_16bit:
-	ret
 
 	.align	16
 gdt:

@@ -8,6 +8,7 @@ fn main() -> io::Result<()> {
         .file("asm/init.s")
         .file("asm/cache.s")
         .file("asm/raminit.s")
+        .file("asm/modes.s")
         .compile("asminit");
 
     Ok(())

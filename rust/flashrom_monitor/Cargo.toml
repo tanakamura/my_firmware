@@ -1,13 +1,11 @@
 [package]
-name = "sdram_monitor"
+name = "flashrom_monitor"
 version = "0.1.0"
 edition = "2024"
 build = "build.rs"
 
 [dependencies]
+init86 = { path = "../init86" }
 x86 = "0.52.0"
-common = { path = "../common" }
 monitor = { path = "../monitor" }
-
-[build-dependencies]
-cc = "1.1.31"
+common = { path = "../common" }

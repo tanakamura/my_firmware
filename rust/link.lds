@@ -3,7 +3,7 @@ OUTPUT_FORMAT("binary")
 ENTRY(reset)
 
 ROM_SIZE = 256K;
-INIT16_SIZE = 128;
+INIT16_SIZE = 1024;
 
 MEMORY {
        INIT16 (rx) : org = 64K-INIT16_SIZE, len = INIT16_SIZE

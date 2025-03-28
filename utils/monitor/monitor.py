@@ -4,6 +4,9 @@ import atexit
 import readline
 import struct
 import serial
+import argparse
+import socket
+import atexit
 
 global proc
 proc = None
@@ -36,6 +39,26 @@ class Machine:
     def __init__(self, to_mon, from_mon):
         self.to_mon = to_mon
         self.from_mon = from_mon
+
+def open_machine() -> Machine:
+    args = argparse.ArgumentParser()
+    args.add_argument("--dev_type", choices=["serial", "uds"], required=True, type=str)
+    args.add_argument("--dev_path", required=True, type=str)
+
+    args = args.parse_args()
+    if args.dev_type == "serial":
+        port = serial.Serial(port=args.dev_path, baudrate=115200 , parity='N', stopbits=1)
+        to_mon = port
+        from_mon = port
+    elif args.dev_type == "uds":
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(args.dev_path)
+        to_mon = s.makefile("wb")
+        from_mon = s.makefile("rb")
+
+    atexit.register(cleanup)
+
+    return Machine(to_mon, from_mon)
 
 def cleanup():
     global proc
@@ -195,17 +218,7 @@ def init(m:Machine):
     m.to_mon.write(data)
     m.to_mon.flush()
     data = m.from_mon.read(1)
-    if data[0] != 1:
-        print("Init failed")
-        sys.exit(1)
-
-atexit.register(cleanup)
-
-def init(m:Machine):
-    data = struct.pack("<B", INIT)
-    m.to_mon.write(data)
-    m.to_mon.flush()
-    data = m.from_mon.read(1)
+    print(data[0])
     if data[0] != 1:
         print("Init failed")
         sys.exit(1)

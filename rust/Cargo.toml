@@ -7,6 +7,9 @@ members = [
   "sdram_monitor",
   "common",
   "init86",
+  "test_vga",
+  "monitor",
+  "flashrom_monitor",
 ]
 
 [profile.release]
