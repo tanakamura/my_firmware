@@ -166,7 +166,7 @@ https://github.com/tanakamura/my_firmware/blob/qiita20250405/d945gclf_monitor/re
 
 これは、先程の生出力を解析して、DRAM 初期化に関連する MMIO アクセスだけを抜き出すスクリプトになる。
 
-coreboot の raminit ソースから、DRAM 初期化に必要なのは、i945 サウスブリッジ上にある、MCHBAR である。
+coreboot の raminit ソースから、DRAM 初期化に必要なのは、i945 ノースブリッジ上にある、MCHBAR である。
 MCHBAR へのアクセス方法は、公式資料にも書かれており、
 
 https://www.intel.com/Assets/PDF/datasheet/307502.pdf
@@ -191,6 +191,8 @@ OL,00000cfc,f0000003
 下 の 3の意味は↓で、
 
 ![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/12877/c2a11421-f289-45a0-b45d-2ff9175cd4a1.png)
+
+(https://www.intel.com/Assets/PDF/datasheet/307502.pdf より)
 
 最初のPCIアクセスの意味は…分かりませんでした…D31:f0 のd8 = GPIOBASE にアクセスしてる？
 
