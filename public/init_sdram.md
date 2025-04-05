@@ -1,17 +1,17 @@
 ---
 title: D945GCLF2 で SDRAM を初期化する
 tags:
-  - 'PC'
-  - 'BIOS'
-  - 'x86'
+  - PC
+  - BIOS
+  - x86
 private: false
-updated_at: ''
-id: null
+updated_at: '2025-04-06T01:09:03+09:00'
+id: 57f1e39f090299354ccf
 organization_url_name: null
 slide: false
 ignorePublish: false
 ---
-(なんか忙しくて間があいた)
+(なんか忙しくて間があきましたすいません)
 
 前回 : https://qiita.com/tanakmura/items/1951f3f6ff84fd27fe31
 
