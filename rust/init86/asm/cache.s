@@ -1,5 +1,5 @@
 
-	.text
+	.section .text.init32, "ax"
 	.code32
 	.globl enable_car
 	.type enable_car, @function

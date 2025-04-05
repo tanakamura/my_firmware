@@ -1,4 +1,4 @@
-	.text
+	.section .text.init32, "ax"
 	.globl	raminit
 	.type raminit, @function
 

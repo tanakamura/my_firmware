@@ -70,6 +70,7 @@ class BusAssigner:
 
                 else:
                     for bar in range(6):
+                        self.config_write(m, cur_bus, dev, func, 0x10 + bar * 4, 0xffffffff)
                         barval = self.config_read32(m, cur_bus, dev, func, 0x10 + bar * 4)
                         if barval & 1: # io
                             bar = barval & 0xfffffffc

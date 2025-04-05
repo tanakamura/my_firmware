@@ -44,7 +44,7 @@
 1:
 .endm
 
-	.section .text.keep, "ax"
+	.section .text.init32, "ax"
 	.code32
 
 init32:
@@ -150,9 +150,19 @@ init_uart:
 1:
 raminit_done:
 
-	movl	$0x70000000, %esp # 2GiB-256M (GPU RAM)
+	movl	$__stack_bottom, %esp
 
 	call	enable_sdram_cache
+
+	leal	__LOAD_ROM_START, %esi
+	leal	__LOAD_RAM_START, %edi
+	leal	__LOAD_SIZE_DW, %ecx
+	rep	movsl
+
+	leal	__BSS_RAM_START, %edi
+	leal	__BSS_RAM_SIZE_DW, %ecx
+	xor	%eax, %eax
+	rep	stosl
 
 	# enable fpu, sse
 	mov	%cr0, %eax
@@ -164,6 +174,7 @@ raminit_done:
 	or	$((1<<9)|(1<<10)), %eax # enable sse
 	mov	%eax, %cr4
 
+	call	common_init
 	call	rmain
 
 1:
@@ -174,7 +185,7 @@ raminit_done:
 	.size	init32, .-init32
 
 
-	.section .rodata, "a"
+	.section .rodata.init32, "a"
 	.align	16
 gdt_table:
 	# selector[0x00]
@@ -202,7 +213,6 @@ init:
 gdt:
 	.word	(8*5)-1
 	.long	gdt_table
-
 
 	.section	.reset16, "ax"
 	.globl	reset

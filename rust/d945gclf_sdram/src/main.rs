@@ -51,10 +51,6 @@ fn uart_puts(s: &str) {
     putchar(b'\n');
 }
 
-pub extern "C" fn keep_syms() {
-    init86::keep_syms();
-}
-
 #[unsafe(no_mangle)]
 pub extern "C" fn rmain() -> ! {
     loop {
