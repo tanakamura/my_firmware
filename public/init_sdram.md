@@ -5,7 +5,7 @@ tags:
   - BIOS
   - x86
 private: false
-updated_at: '2025-04-06T01:09:03+09:00'
+updated_at: '2025-04-06T01:14:47+09:00'
 id: 57f1e39f090299354ccf
 organization_url_name: null
 slide: false
@@ -243,3 +243,6 @@ https://github.com/tanakamura/my_firmware/blob/qiita20250405/d945gclf_monitor/r/
 
 
 次回、PCI bus assign 編に続く
+
+super IO と DRAM 初期化が終わればあとは QEMU で実験できるので、次回以降しばらくQEMUで書きます。
+
