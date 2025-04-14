@@ -197,15 +197,24 @@ fn enable_vga_optionrom(pci: &dyn PciConfigIf, dev: &PCIDev) {
             return;
         }
 
-        let size = *(adr.offset(2)) as usize;
+        let size = (*(adr.offset(2)) as usize) * 512;
         let rom_slice = core::slice::from_raw_parts(adr, size);
 
         let vga_option_rom_addr = core::slice::from_raw_parts_mut(0xc0000 as *mut u8, size);
 
-        /* PAM1 : use dram */
+        /* PAM1,2(0xc0000-0xcffff) : use dram */
         pci.write8(0, 0x91, 0x33);
+        pci.write8(0, 0x92, 0x33);
 
         vga_option_rom_addr.copy_from_slice(rom_slice);
+        println!(
+            "VGA Option ROM copied to 0xc0000-{:#x}, size={:#x}",
+            0xc0000 + size,
+            size
+        );
+
+        let dev_adr = pci.bus_dev_fn_to_adr(dev.bus, dev.dev, dev.func);
+        //pci.write32(dev_adr, 0x30, 0xc0000 | 0); // set to c0000 and disable exp_rom
     }
 }
 

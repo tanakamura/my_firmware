@@ -11,10 +11,14 @@ SERIAL="-serial mon:stdio"
 
 
 # -M q35 \
+# -nodefaults \
+# -readconfig $scriptdir/machine.cfg \
+
 
 qemu-system-i386  \
--d trace:'pci_cfg_write' \
- -display none \
- -nodefaults \
- -readconfig $scriptdir/machine.cfg \
+  -d trace:"*pci*" \
+ -vga std \
+ -M q35 \
  -m 2G -bios $1 $SERIAL \
+  \
+

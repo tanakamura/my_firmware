@@ -1,6 +1,6 @@
-	.bss
-	.comm state16_regs, 12 * 4
-	.comm state32_esp, 4
+	.section	.bda.bss, "ax"
+	# state16_regs is defined by linker script
+	# state32_esp is defined by linker script
 
 	.text
 	.globl	enter_to_16_asm
@@ -13,21 +13,30 @@ enter_to_16_asm:
 
 	cli
 
-	##  see lib.rs::State16
-	mov	state16_regs + 4*0, %eax
-	mov	state16_regs + 4*1, %ecx
-	mov	state16_regs + 4*2, %edx
-	mov	state16_regs + 4*3, %ebx
+#	##  see lib.rs::State16
+#	mov	state16_regs + 4*0, %eax
+#	mov	state16_regs + 4*1, %ecx
+#	mov	state16_regs + 4*2, %edx
+#	mov	state16_regs + 4*3, %ebx
+#
+#	mov	state16_regs + 4*4, %esp
+#
+#	mov	state16_regs + 4*9, %edi # ip (saved in edi)
+#
+#	mov	state16_regs + 4*10, %ebp # es
+#	mov	%bp, %es
+#	mov	state16_regs + 4*11, %ebp # ss
+#	mov	%bp, %ss
+#
+#	mov	state16_regs + 4*12, %ebp # cs (saved in bp)
+#
+#	mov	state16_regs + 4*13, %esi # ds (saved in esi)
 
-	mov	state16_regs + 4*4, %esp
-
-	mov	state16_regs + 4*9, %esi # cs
-	mov	state16_regs + 4*10, %edi # ip
-	mov	state16_regs + 4*11, %ebp # ds
-	mov	%bp, %ds
-	mov	%bp, %ss
-
-	ljmp	$0x18,$switch_to_16_f0000_16bit
+	## ip in real mode = di
+	## cs in real mode = bp
+	## ds in real mode = si
+	## 0x18 = segment offset = 0xf0000, 16bit protect mode segment (see init.s)
+	ljmp	$0x18,$switch_to_real_mode
 
 	.globl	leave_from_16
 leave_from_16:
@@ -40,29 +49,65 @@ leave_from_16:
 	.section	.text16, "ax"
 	.code16
 
-	.globl	switch_to_16_f0000_16bit
-switch_to_16_f0000_16bit:
-	mov	%cr0, %ebp
-	and	$-2, %ebp
-	mov	%ebp, %cr0
+switch_to_real_mode:		# seg=0xf000
+	## ip in real mode = di
+	## cs in real mode = bp
+	## ds in real mode = si
 
-	push	%si
-	push	%di
+	##  switch to real mode from protect mode
+	mov	%cr0, %eax
+	and	$-2, %eax
+	mov	%eax, %cr0
 
+	ljmp	$0xf000,$1f		# leave protect mode
+1:
+
+	xor	%ax, %ax
+	mov	%ax, %ds	# ds = 0, to point state16_regs
+
+	##  see lib.rs::X86State
+	mov	state16_regs + 4*0, %eax
+	mov	state16_regs + 4*1, %ecx
+	mov	state16_regs + 4*2, %edx
+	mov	state16_regs + 4*3, %ebx
+	mov	state16_regs + 4*4, %esp
+	mov	state16_regs + 4*5, %ebp
+	mov	state16_regs + 4*6, %esi
+	mov	state16_regs + 4*7, %edi
+
+	mov	state16_regs + 4*9, %es # es
+	mov	state16_regs + 4*10, %ss
+	mov	state16_regs + 4*12, %ds
+
+	push	state16_regs + 4*13 # cs
+	push	state16_regs + 4*11 # ip
+
+	## esp[0] = bp = ip
+	## esp[2] = di = cs
 	lcall	*(%esp)
 
+	xor	%bp, %bp
+	mov	%bp, %ds
+
+	##  see lib.rs::X86State
+	mov	%eax, state16_regs + 4*0
+	mov	%ecx, state16_regs + 4*1
+	mov	%edx, state16_regs + 4*2
+	mov	%ebx, state16_regs + 4*3
+	mov	%esp, state16_regs + 4*4
+	mov	%ebp, state16_regs + 4*5
+	mov	%esi, state16_regs + 4*6
+	mov	%edi, state16_regs + 4*7
+
+	## switch to protect mode
 	mov	%cr0, %ebp
-	and	$1, %ebp
+	or	$1, %ebp
 	mov	%ebp, %cr0
 
-	mov	$0x8, %si
+	mov	$0x8, %si	# full data access
 	mov	%si, %ds
 	mov	%si, %es
 	mov	%si, %fs
 	mov	%si, %ss
 
-	ljmp	$0x18, $leave_from_16_f0000_32bit
-
-	.code32
-leave_from_16_f0000_32bit:
-	ljmp	$0x10, $leave_from_16
+	ljmpl	$0x10, $leave_from_16

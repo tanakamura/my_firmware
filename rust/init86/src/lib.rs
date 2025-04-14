@@ -1,7 +1,7 @@
 #![no_std]
 
 // see asm/modes.s
-#[repr(packed, C)]
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct X86State {
     pub eax: u32, // 0
@@ -10,15 +10,18 @@ pub struct X86State {
     pub ebx: u32, // 3
     pub esp: u32, // 4
 
-    // do not use followed regs. these regs may clobbered
     pub ebp: u32,    // 5
     pub esi: u32,    // 6
     pub edi: u32,    // 7
-    pub eflags: u32, // 8
-    pub cs: u32,     // 9
-    pub eip: u32,    // 10
-    pub ds: u32,     // 11
-                     //12
+    pub eflags: u32, // 8, clobberd, unable to pass to real mode
+
+    pub es: u32, // 9
+    pub ss: u32, // 10
+
+    pub eip: u32, // 11
+    pub ds: u32,  // 12
+    pub cs: u32,  // 13
+                  // 14
 }
 
 unsafe extern "C" {
@@ -33,22 +36,35 @@ pub fn keep_syms() {
     }
 }
 
-pub fn enter_to_16() {
+#[unsafe(no_mangle)]
+extern "C" fn enter_to_16() {
     unsafe {
         enter_to_16_asm();
     }
 }
 
-pub fn set_16state(st: &X86State) {
+#[unsafe(no_mangle)]
+extern "C" fn set_16state(st: &X86State) {
     unsafe {
         let p = &raw mut state16_regs as *mut X86State;
         *p = *st;
     }
 }
 
-pub fn get_16state() -> X86State {
+#[unsafe(no_mangle)]
+extern "C" fn get_16state() -> X86State {
     unsafe {
         let p = &raw const state16_regs as *const X86State;
         *p
     }
+}
+
+pub struct ServiceFuncTable {
+    pub set_16state: extern "C" fn(&X86State),
+    pub get_16state: extern "C" fn() -> X86State,
+    pub enter_to_16: extern "C" fn(),
+}
+
+pub fn get_service_func_table() -> *const ServiceFuncTable {
+    return (0x400 + 0) as *const ServiceFuncTable;
 }

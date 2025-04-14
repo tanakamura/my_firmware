@@ -174,6 +174,13 @@ raminit_done:
 	or	$((1<<9)|(1<<10)), %eax # enable sse
 	mov	%eax, %cr4
 
+	mov	$set_16state, %eax
+	mov	%eax, 0x400 + 4*0
+	mov	$get_16state, %eax
+	mov	%eax, 0x400 + 4*1
+	mov	$enter_to_16, %eax
+	mov	%eax, 0x400 + 4*2
+
 	call	common_init
 	call	rmain
 

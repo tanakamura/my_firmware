@@ -1,5 +1,6 @@
 OUTPUT_ARCH("i386")
 OUTPUT_FORMAT("binary")
+TARGET("binary")
 ENTRY(reset)
 
 ROM_FULL_SIZE = 256K;
@@ -22,9 +23,21 @@ MEMORY {
 
        RESET_VECTOR (rx) : org = 4096M - 16, len = 16
        RESET_VECTOR_ROM (rx) : org = ROM_FULL_SIZE - 16, len = 16
+
+       BDA (rw) : org = 0x400, len = 256
 }
 
 SECTIONS {
+         bda : {
+                service_func_table = .;
+                . += 16 * 4;
+                state16_regs = .;
+                . += 16 * 4;
+                state32_esp = .;
+                . += 4;
+                bda_end = 0x400 + 256;
+         } > BDA
+
          .init_region : {
                FILL(0xffffffff);
                . = 0;
