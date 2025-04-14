@@ -1,0 +1,11 @@
+cargo-features = ["per-package-target"]
+[package]
+name = "test_vga"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[dependencies]
+init86 = { path = "../init86" }
+x86 = "0.52.0"
+common = { path = "../common" }
