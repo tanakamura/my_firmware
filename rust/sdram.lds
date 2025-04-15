@@ -3,9 +3,11 @@ OUTPUT_FORMAT("binary")
 ENTRY(reset)
 
 
+RAM_START = 512M;
+RAM_SIZE = 256M;
 MEMORY {
        BDA (rw) : org = 0x400, len = 256
-       SDRAM (rwx) : org = 0x10000000, len = 256M
+       SDRAM (rwx) : org = RAM_START, len = RAM_SIZE
 }
 
 SECTIONS {
@@ -41,7 +43,16 @@ SECTIONS {
          . = ALIGN(16);
          .bss : {
                *(.bss*)
+               . = ALIGN(64);
+               __end = .;
          } > SDRAM
+
+         __ram_last = RAM_START + RAM_SIZE;
+         __heap_size = __ram_last - __end;
+         __stack_bottom = RAM_START + RAM_SIZE;
+
+         __end16_in_segment = 64K;
+         __end16_flat32 = 64K;
 
          /DISCARD/ : { *(*) }
 }

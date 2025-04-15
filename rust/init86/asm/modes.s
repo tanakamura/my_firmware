@@ -46,8 +46,18 @@ leave_from_16:
 
 	ret
 
-	.section	.text16, "ax"
+	.section	.text16.ram, "ax"
 	.code16
+	.globl	nop16
+
+nop16:
+	nop
+	nop
+	ret
+
+	.section	.text16.rom, "ax"
+	.code16
+	.globl	switch_to_real_mode
 
 switch_to_real_mode:		# seg=0xf000
 	## ip in real mode = di

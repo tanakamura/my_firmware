@@ -10,6 +10,8 @@
 	.equ	UART_DIV_LO, 0x3f8
 	.equ	UART_DIV_HI, 0x3f9
 
+	.equ	RAM16_FLAT_ADDR, 0x80000
+
 .macro superio_write port, data
 	mov	\port, %al
 	mov	$0x2e, %dx
@@ -159,8 +161,18 @@ raminit_done:
 	leal	__LOAD_SIZE_DW, %ecx
 	rep	movsl
 
+	leal	__LOAD_ROM16_START, %esi
+	leal	__LOAD_RAM16_START_FLAT32, %edi
+	leal	__LOAD_ROM16_SIZE_DW, %ecx
+	rep	movsl
+
 	leal	__BSS_RAM_START, %edi
 	leal	__BSS_RAM_SIZE_DW, %ecx
+	xor	%eax, %eax
+	rep	stosl
+
+	leal	__BSS_RAM16_START_FLAT32, %edi
+	leal	__BSS_RAM16_SIZE_DW, %ecx
 	xor	%eax, %eax
 	rep	stosl
 
@@ -174,6 +186,7 @@ raminit_done:
 	or	$((1<<9)|(1<<10)), %eax # enable sse
 	mov	%eax, %cr4
 
+	## setup service function table
 	mov	$set_16state, %eax
 	mov	%eax, 0x400 + 4*0
 	mov	$get_16state, %eax
@@ -191,7 +204,6 @@ raminit_done:
 	.type	init32, @function
 	.size	init32, .-init32
 
-
 	.section .rodata.init32, "a"
 	.align	16
 gdt_table:
@@ -206,8 +218,9 @@ gdt_table:
 	# selector[0x20] : initial ds compatible, base=0xf0000, limit=0xffff, 16bit, byte granularity
 	.quad	((0x0)<<52) | (0x0<<48) | (0x93<<40) | (0xf0000<<16) | (0xffff<<0) # selector[0x20] : initial ds compatible
 
-	.section	.text16, "ax"
+	.section	.text16.rom, "ax"
 	.code16
+	.globl	init
 
 init:
 	lgdtl	%cs:gdt
