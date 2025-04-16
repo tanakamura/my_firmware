@@ -55,7 +55,7 @@ nop16:
 	nop
 	ret
 
-	.section	.text16.rom, "ax"
+	.section	.text16.ram, "ax"
 	.code16
 	.globl	switch_to_real_mode
 

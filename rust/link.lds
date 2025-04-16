@@ -52,8 +52,8 @@ ROM_START = 4096M - ROM_FULL_SIZE;
  *
  */
 
-__RAM16_SEGMENT = 0x8000;
-__RAM16_START_FLAT32 = 0x80000;
+__RAM16_SEGMENT = 0xF000;
+__RAM16_START_FLAT32 = 0xF0000;
 
 MEMORY {
        RAM (rwx) : org = RAM_START, len = RAM_SIZE
@@ -120,6 +120,7 @@ SECTIONS {
                KEEP(*(.text16.rom))
          } > ROM_16 AT > ROM_STORE_16
 
+         /* F000:0000 */
          .ram16 : {
                FILL(0xffffffff);
                __LOAD_RAM16_START = .;

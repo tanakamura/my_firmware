@@ -156,6 +156,31 @@ raminit_done:
 
 	call	enable_sdram_cache
 
+	// Set PAM as DRAM
+	## 0x000c_0000 - 0x000f_ffff : use DRAM
+
+	mov	$0x30, %cl
+	pci_write_config8 0x00, 0x00, 0x00, 0x90
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, 0x91
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, 0x92
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, 0x93
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, 0x94
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, 0x95
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, 0x96
+
+	## invalidate cache
+	mov	$0xc0000, %edi
+	mov	$((0x100000-0x0c0000)/4), %ecx
+	mov	$-1, %eax
+	rep	stosl
+	wbinvd
+
 	leal	__LOAD_ROM_START, %esi
 	leal	__LOAD_RAM_START, %edi
 	leal	__LOAD_SIZE_DW, %ecx
@@ -207,20 +232,10 @@ raminit_done:
 	.section .rodata.init32, "a"
 	.align	16
 gdt_table:
-	# selector[0x00]
-	.quad	0
-	# selector[0x08] : full data access
-	.quad	((0xc)<<52) | (0xf<<48) | (0x93<<40) | (0xffff<<0)
-	# selector[0x10] : full text access
-	.quad	((0xc)<<52) | (0xf<<48) | (0x9b<<40) | (0xffff<<0)
-	# selector[0x18] : initial cs compatible, base=0xf0000, limit=0xffff, 16bit, byte granularity
-	.quad	((0x0)<<52) | (0x0<<48) | (0x9b<<40) | (0xf0000<<16) | (0xffff<<0)
-	# selector[0x20] : initial ds compatible, base=0xf0000, limit=0xffff, 16bit, byte granularity
-	.quad	((0x0)<<52) | (0x0<<48) | (0x93<<40) | (0xf0000<<16) | (0xffff<<0) # selector[0x20] : initial ds compatible
+	.include "asm/gdt.s"
 
 	.section	.text16.rom, "ax"
 	.code16
-	.globl	init
 
 init:
 	lgdtl	%cs:gdt
