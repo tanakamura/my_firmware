@@ -15,20 +15,22 @@ use x86::io::{inb, inl, inw, outb, outl, outw};
 fn invoke_int10(regs: &mut init86::X86State) {
     unsafe {
         let service_table = init86::get_service_func_table();
-        let ptr = 0x8000 as *mut u8;
+        let ptr = common::alloc_from_16(0x100);
         {
             *ptr.offset(0) = 0xcd;
             *ptr.offset(1) = 0x10;
             *ptr.offset(2) = 0xcb; // retf
         }
 
-        regs.cs = 0x0000;
-        regs.eip = 0x8000;
-        regs.ds = 0xf000;
+        regs.cs = (ptr as u32 / 16) & 0xf000;
+        regs.eip = ptr as u32 % 65536;
+        regs.ds = regs.cs;
 
         ((*service_table).set_16state)(regs);
         ((*service_table).enter_to_16)();
         *regs = ((*service_table).get_16state)();
+
+        common::free_to_16(ptr, 0x100);
     }
 }
 

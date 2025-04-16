@@ -44,3 +44,22 @@ pub extern "C" fn common_init() {
         }
     }
 }
+
+pub fn alloc_from_16(size: usize) -> *mut u8 {
+    unsafe {
+        let mut heap16 = ALLOCATOR_16.lock();
+        let ptr = heap16
+            .allocate_first_fit(core::alloc::Layout::from_size_align(size, 8).unwrap())
+            .unwrap();
+        ptr.as_ptr()
+    }
+}
+
+pub fn free_to_16(ptr: *mut u8, size: usize) {
+    unsafe {
+        ALLOCATOR_16.lock().deallocate(
+            core::ptr::NonNull::new(ptr).unwrap(),
+            core::alloc::Layout::from_size_align(size, 8).unwrap(),
+        );
+    }
+}
