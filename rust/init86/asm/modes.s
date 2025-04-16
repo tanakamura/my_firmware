@@ -9,7 +9,7 @@ enter_to_16_asm:
 	pusha
 	pushf
 
-	mov	%esp, state32_esp
+	mov	%esp, state32_esp_flat32
 
 	cli
 
@@ -40,7 +40,7 @@ enter_to_16_asm:
 
 	.globl	leave_from_16
 leave_from_16:
-	mov	state32_esp, %esp
+	mov	state32_esp_flat32, %esp
 	popf
 	popa
 
@@ -69,45 +69,45 @@ switch_to_real_mode:		# seg=0xf000
 	and	$-2, %eax
 	mov	%eax, %cr0
 
-	ljmp	$0xf000,$1f		# leave protect mode
+	ljmp	$__RAM16_SEGMENT,$1f		# leave protect mode
 1:
 
-	xor	%ax, %ax
+	mov	$__RAM16_SEGMENT, %ax
 	mov	%ax, %ds	# ds = 0, to point state16_regs
 
 	##  see lib.rs::X86State
-	mov	state16_regs + 4*0, %eax
-	mov	state16_regs + 4*1, %ecx
-	mov	state16_regs + 4*2, %edx
-	mov	state16_regs + 4*3, %ebx
-	mov	state16_regs + 4*4, %esp
-	mov	state16_regs + 4*5, %ebp
-	mov	state16_regs + 4*6, %esi
-	mov	state16_regs + 4*7, %edi
+	mov	state16_regs_in_segment + 4*0, %eax
+	mov	state16_regs_in_segment + 4*1, %ecx
+	mov	state16_regs_in_segment + 4*2, %edx
+	mov	state16_regs_in_segment + 4*3, %ebx
+	mov	state16_regs_in_segment + 4*4, %esp
+	mov	state16_regs_in_segment + 4*5, %ebp
+	mov	state16_regs_in_segment + 4*6, %esi
+	mov	state16_regs_in_segment + 4*7, %edi
 
-	mov	state16_regs + 4*9, %es # es
-	mov	state16_regs + 4*10, %ss
-	mov	state16_regs + 4*12, %ds
+	mov	state16_regs_in_segment + 4*9, %es # es
+	mov	state16_regs_in_segment + 4*10, %ss
+	mov	state16_regs_in_segment + 4*12, %ds
 
-	push	state16_regs + 4*13 # cs
-	push	state16_regs + 4*11 # ip
+	push	state16_regs_in_segment + 4*13 # cs
+	push	state16_regs_in_segment + 4*11 # ip
 
 	## esp[0] = bp = ip
 	## esp[2] = di = cs
 	lcall	*(%esp)
 
-	xor	%bp, %bp
+	mov	$__RAM16_SEGMENT, %bp
 	mov	%bp, %ds
 
 	##  see lib.rs::X86State
-	mov	%eax, state16_regs + 4*0
-	mov	%ecx, state16_regs + 4*1
-	mov	%edx, state16_regs + 4*2
-	mov	%ebx, state16_regs + 4*3
-	mov	%esp, state16_regs + 4*4
-	mov	%ebp, state16_regs + 4*5
-	mov	%esi, state16_regs + 4*6
-	mov	%edi, state16_regs + 4*7
+	mov	%eax, state16_regs_in_segment + 4*0
+	mov	%ecx, state16_regs_in_segment + 4*1
+	mov	%edx, state16_regs_in_segment + 4*2
+	mov	%ebx, state16_regs_in_segment + 4*3
+	mov	%esp, state16_regs_in_segment + 4*4
+	mov	%ebp, state16_regs_in_segment + 4*5
+	mov	%esi, state16_regs_in_segment + 4*6
+	mov	%edi, state16_regs_in_segment + 4*7
 
 	## switch to protect mode
 	mov	%cr0, %ebp

@@ -2,6 +2,7 @@ OUTPUT_ARCH("i386")
 OUTPUT_FORMAT("binary")
 TARGET("binary")
 ENTRY(reset)
+INPUT (./vgabios.bin)
 
 ROM_FULL_SIZE = 256K;
 ROM16_SIZE = 4K;
@@ -73,13 +74,6 @@ MEMORY {
 
 SECTIONS {
          bda : {
-                service_func_table = .;
-                . += 16 * 4;
-                state16_regs = .;
-                . += 16 * 4;
-                state32_esp = .;
-                . += 4;
-                bda_end = 0x400 + 256;
          } > BDA
 
          .init_region : {
@@ -95,6 +89,9 @@ SECTIONS {
                *(.text)
                *(.text.*)
                *(.rodata* .rdata* .rodata..*)
+               __vgabios_bin_start = .;
+               ./vgabios.bin
+               __vgabios_bin_end = .;
                *(.data* .rwdata*)
                . = ALIGN(16);
                __LOAD_RAM_END = .;
@@ -125,6 +122,17 @@ SECTIONS {
                FILL(0xffffffff);
                __LOAD_RAM16_START = .;
                __LOAD_RAM16_START_FLAT32 = . + __RAM16_START_FLAT32;
+
+                service_func_table_in_segment = .;
+                service_func_table_flat32 = service_func_table_in_segment + __RAM16_START_FLAT32;
+                . += 16 * 4;
+                state16_regs_in_segment = .;
+                state16_regs_flat32 = state16_regs_in_segment + __RAM16_START_FLAT32;
+                . += 16 * 4;
+                state32_esp_in_segment = .;
+                state32_esp_flat32 = state32_esp_in_segment + __RAM16_START_FLAT32;
+                . += 4;
+
                KEEP(*(.text16.ram))
                KEEP(*(.rodata16.ram))
                KEEP(*(.data16.ram))

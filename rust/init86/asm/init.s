@@ -174,13 +174,6 @@ raminit_done:
 	mov	$0x33, %cl
 	pci_write_config8 0x00, 0x00, 0x00, 0x96
 
-	## invalidate cache
-	mov	$0xc0000, %edi
-	mov	$((0x100000-0x0c0000)/4), %ecx
-	mov	$-1, %eax
-	rep	stosl
-	wbinvd
-
 	leal	__LOAD_ROM_START, %esi
 	leal	__LOAD_RAM_START, %edi
 	leal	__LOAD_SIZE_DW, %ecx

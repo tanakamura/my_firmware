@@ -20,5 +20,4 @@ qemu-system-i386  \
  -vga std \
  -M q35 \
  -m 2G -bios $1 $SERIAL \
-   \
 

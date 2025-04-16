@@ -24,9 +24,7 @@ fn invoke_int10(regs: &mut init86::X86State) {
 
         regs.cs = 0x0000;
         regs.eip = 0x8000;
-        regs.ss = 0x0000;
-        regs.esp = 0x8000;
-        regs.ds = 0x0000;
+        regs.ds = 0xf000;
 
         ((*service_table).set_16state)(regs);
         ((*service_table).enter_to_16)();
@@ -81,7 +79,7 @@ struct VgaBiosHeader {
     VbeVersion: u16,
     OemStringPtr: [u16; 2],
     Capabilities: [u8; 4],
-    VideoModePtr : [u16; 2],
+    VideoModePtr: [u16; 2],
     TotalMemory: u16,
     OemSoftwareRev: u16,
     OemVendorNamePtr: u32,
@@ -106,12 +104,14 @@ pub extern "C" fn rmain() -> ! {
         // init optionrom
         st.cs = 0xc000;
         st.eip = 0x0003;
-        st.ss = 0x0000;
-        st.esp = 0x8000;
-        st.ds = 0x0000;
+        st.esp = 0x0000;
+
+        st.ss = 0xf000;
+        st.ds = 0xf000;
+        st.es = 0xf000;
+
         st.ebx = 0xffff;
         st.edx = 0xffff;
-        st.es = 0xf000;
         st.edi = 0;
 
         st.eax = ((vga.bus as u32) << 8) | ((vga.dev as u32) << 3) | (vga.func as u32);
@@ -126,11 +126,14 @@ pub extern "C" fn rmain() -> ! {
         println!("Returned from vga option rom = {:x}", st.eax);
 
         // get video mode
+        st.esp = 0xf000;
+        st.ss = 0x0000;
+
         st.eax = 0x4f00;
-        st.edi = 0x7000;
+        st.edi = 0x2000;
         st.es = 0x0000;
 
-        let vbe_info = st.edi as *mut VgaBiosHeader;
+        let vbe_info = (st.edi + st.es * 16) as *mut VgaBiosHeader;
 
         unsafe {
             (*vbe_info).VbeSignature[0] = b'V';
@@ -151,12 +154,13 @@ pub extern "C" fn rmain() -> ! {
             println!(
                 "modes_ptr = {:x} {:x}",
                 core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[0]),
-                core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[1]));
+                core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[1])
+            );
 
             let mut i = 0;
             let off = core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[0]);
             let seg = core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[1]);
-            let ptr = (seg*16 + off) as *const u16;
+            let ptr = (seg * 16 + off) as *const u16;
 
             loop {
                 unsafe {
@@ -165,7 +169,7 @@ pub extern "C" fn rmain() -> ! {
                         break;
                     }
                     println!("mode[{}] = {}", i, mode_val);
-                    i+=1;
+                    i += 1;
                 }
             }
         }

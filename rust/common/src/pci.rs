@@ -189,8 +189,13 @@ fn assign_resource_recursive(
     }
 }
 
+unsafe extern "C" {
+    static __vgabios_bin_start: u8;
+}
+
 fn enable_vga_optionrom(pci: &dyn PciConfigIf, dev: &PCIDev) {
-    let adr = dev.exp_rom.unwrap().addr as *const u8;
+    //let adr = dev.exp_rom.unwrap().addr as *const u8;
+    let adr = &raw const __vgabios_bin_start;
     unsafe {
         let sig = *(adr as *const u16);
         if sig != 0xaa55 {
@@ -202,10 +207,6 @@ fn enable_vga_optionrom(pci: &dyn PciConfigIf, dev: &PCIDev) {
 
         let vga_option_rom_addr = core::slice::from_raw_parts_mut(0xc0000 as *mut u8, size);
 
-        /* PAM1,2(0xc0000-0xcffff) : use dram */
-        pci.write8(0, 0x91, 0x33);
-        pci.write8(0, 0x92, 0x33);
-
         vga_option_rom_addr.copy_from_slice(rom_slice);
         println!(
             "VGA Option ROM copied to 0xc0000-{:#x}, size={:#x}",
@@ -214,7 +215,7 @@ fn enable_vga_optionrom(pci: &dyn PciConfigIf, dev: &PCIDev) {
         );
 
         let dev_adr = pci.bus_dev_fn_to_adr(dev.bus, dev.dev, dev.func);
-        //pci.write32(dev_adr, 0x30, 0xc0000 | 0); // set to c0000 and disable exp_rom
+        pci.write32(dev_adr, 0x30, 0xc0000 | 0); // set to c0000 and disable exp_rom
     }
 }
 

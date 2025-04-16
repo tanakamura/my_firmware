@@ -27,7 +27,7 @@ pub struct X86State {
 unsafe extern "C" {
     pub fn reset();
     pub fn enter_to_16_asm();
-    static mut state16_regs: X86State;
+    static mut state16_regs_flat32: X86State;
 }
 
 pub fn keep_syms() {
@@ -46,7 +46,7 @@ extern "C" fn enter_to_16() {
 #[unsafe(no_mangle)]
 extern "C" fn set_16state(st: &X86State) {
     unsafe {
-        let p = &raw mut state16_regs as *mut X86State;
+        let p = &raw mut state16_regs_flat32 as *mut X86State;
         *p = *st;
     }
 }
@@ -54,7 +54,7 @@ extern "C" fn set_16state(st: &X86State) {
 #[unsafe(no_mangle)]
 extern "C" fn get_16state() -> X86State {
     unsafe {
-        let p = &raw const state16_regs as *const X86State;
+        let p = &raw const state16_regs_flat32 as *const X86State;
         *p
     }
 }
