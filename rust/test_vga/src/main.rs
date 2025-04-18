@@ -25,6 +25,8 @@ fn invoke_int10(regs: &mut init86::X86State) {
         regs.cs = (ptr as u32 / 16) & 0xf000;
         regs.eip = ptr as u32 % 65536;
         regs.ds = regs.cs;
+        regs.ss = regs.cs;
+        regs.esp = 0xfffc;
 
         ((*service_table).set_16state)(regs);
         ((*service_table).enter_to_16)();
@@ -93,6 +95,8 @@ struct VgaBiosHeader {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rmain() -> ! {
+    println!("Hello test_vga!!");
+
     let pciif = common::pci::IOPciConfig {};
 
     let mut pci = common::pci::scan_bus(&pciif, 0, 0, 0);
@@ -106,7 +110,7 @@ pub extern "C" fn rmain() -> ! {
         // init optionrom
         st.cs = 0xc000;
         st.eip = 0x0003;
-        st.esp = 0x0000;
+        st.esp = 0xfffc;
 
         st.ss = 0xf000;
         st.ds = 0xf000;
@@ -128,14 +132,14 @@ pub extern "C" fn rmain() -> ! {
         println!("Returned from vga option rom = {:x}", st.eax);
 
         // get video mode
-        st.esp = 0xf000;
-        st.ss = 0x0000;
+        st.esp = 0xfffc;
+        st.ss = 0xf000;
+
+        let vbe_info = common::alloc_from_16t::<VgaBiosHeader>();
 
         st.eax = 0x4f00;
-        st.edi = 0x2000;
-        st.es = 0x0000;
-
-        let vbe_info = (st.edi + st.es * 16) as *mut VgaBiosHeader;
+        st.es = (vbe_info as u32 / 16) & 0xf000;
+        st.edi = vbe_info as u32 % 65536;
 
         unsafe {
             (*vbe_info).VbeSignature[0] = b'V';
@@ -160,8 +164,8 @@ pub extern "C" fn rmain() -> ! {
             );
 
             let mut i = 0;
-            let off = core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[0]);
-            let seg = core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[1]);
+            let off = core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[0]) as usize;
+            let seg = core::ptr::read_unaligned(&raw const (*vbe_info).VideoModePtr[1]) as usize;
             let ptr = (seg * 16 + off) as *const u16;
 
             loop {
@@ -182,6 +186,8 @@ pub extern "C" fn rmain() -> ! {
             let ptr = 0xb8000 as *mut u8;
             *ptr = b'a';
         }
+
+        common::free_to_16t(vbe_info);
     }
 
     loop {}

@@ -2,7 +2,7 @@ OUTPUT_ARCH("i386")
 OUTPUT_FORMAT("binary")
 TARGET("binary")
 ENTRY(reset)
-INPUT (./vgabios.bin)
+/*INPUT (./vgabios.bin)*/
 
 ROM_FULL_SIZE = 256K;
 ROM16_SIZE = 4K;
@@ -90,7 +90,7 @@ SECTIONS {
                *(.text.*)
                *(.rodata* .rdata* .rodata..*)
                __vgabios_bin_start = .;
-               ./vgabios.bin
+               /* ./vgabios.bin */
                __vgabios_bin_end = .;
                *(.data* .rwdata*)
                . = ALIGN(16);
@@ -103,10 +103,10 @@ SECTIONS {
                __BSS_RAM_START = .;
                *(.bss .bss.*)
                . = ALIGN(16);
-               __BSS_RAM_SIZE_DW = (. - __BSS_RAM_START) / 4;
                . = ALIGN(64);
                __end = .;
          } > RAM AT > ROM_STORE_32
+         __BSS_RAM_SIZE_DW = (__end - __BSS_RAM_START) / 4;
          __ram_last = RAM_START + RAM_SIZE;
          __heap_size = __ram_last - __end;
          __stack_bottom = RAM_START + RAM_SIZE;
@@ -146,12 +146,11 @@ SECTIONS {
 
                *(.bss16)
                . = ALIGN(16);
-               __BSS_RAM16_SIZE_DW = (. - __BSS_RAM16_START_IN_SEGMENT) / 4;
                __end16_in_segment = .;
                __end16_flat32 = . + __RAM16_START_FLAT32;
          } > RAM_16 AT > ROM_STORE_32
          __stack16_bottom_in_segment = 0;
-
+         __BSS_RAM16_SIZE_DW = (__end16_in_segment - __BSS_RAM16_START_IN_SEGMENT) / 4;
          __LOAD_ROM16_START = LOADADDR(.ram16) + ROM_START;
          __LOAD_ROM16_SIZE_DW = (__LOAD_RAM16_END - __LOAD_RAM16_START)/4;
 

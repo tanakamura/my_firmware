@@ -16,8 +16,9 @@ SERIAL="-serial mon:stdio"
 
 
 qemu-system-i386  \
- -d trace:'*' \
  -vga std \
  -M q35 \
+ -smp 2 \
+ -accel kvm \
  -m 2G -bios $1 $SERIAL \
 

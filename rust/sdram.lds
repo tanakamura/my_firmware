@@ -53,6 +53,8 @@ SECTIONS {
 
          __end16_in_segment = 64K;
          __end16_flat32 = 64K;
+         service_func_table_flat32 = 0xf0000;
+         state16_regs_flat32 = 0xf0000 + 16*4;
 
          /DISCARD/ : { *(*) }
 }

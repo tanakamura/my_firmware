@@ -52,13 +52,42 @@ enable_sdram_cache:
 	or	$0x60000000, %eax
 	mov	%eax, %cr0
 
+	## MSR_BBL_CR_CTL3
+	mov	$0x11e, %ecx
+	rdmsr
+	or	$(1<<8), %eax # enable L2
+	wrmsr
+
+	## invalidate L2
 	invd
 
-	## enable variable mtrr and fixed mtrr
-	mov	$((1<<11)|(1<<10)), %eax
-	mov	$0, %edx
+	## disable variable mtrr and fixed mtrr
 	mov	$0x2ff, %ecx
+	rdmsr
+	mov	$~((1<<11)|(1<<10)), %ebx
+	andl	%ebx, %eax
 	wrmsr
+
+.macro fixed_set_6 msr
+	mov	$\msr, %ecx
+	wrmsr
+.endm
+
+	mov	$0x06060606, %eax
+	mov	%eax, %edx
+
+	fixed_set_6	0x250
+	fixed_set_6	0x258
+	fixed_set_6	0x259
+	fixed_set_6	0x259
+	fixed_set_6	0x268
+	fixed_set_6	0x269
+	fixed_set_6	0x26A
+	fixed_set_6	0x26B
+	fixed_set_6	0x26C
+	fixed_set_6	0x26D
+	fixed_set_6	0x26E
+	fixed_set_6	0x26F
 
 	## wb : 0x0000_0000 - 0x7fffffff (SDRAM)
 	xor	%edx, %edx
@@ -78,6 +107,11 @@ enable_sdram_cache:
 	mov	$0x203, %ecx	# mtrr mask
 	wrmsr
 
+	## enable variable mtrr and fixed mtrr
+	mov	$((1<<11)|(1<<10)), %eax
+	mov	$0, %edx
+	mov	$0x2ff, %ecx
+	wrmsr
 
 	## enable cache
 	mov	%cr0, %eax

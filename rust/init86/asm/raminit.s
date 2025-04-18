@@ -17,7 +17,7 @@ raminit:
 	## restart
 	mov	%eax, PMCON2_ADDR
 	mov	PMCON3_ADDR, %eax
-	or	$(1<<3), %eax
+	or	$(1<<3), %eax 	# sest SLP_S4# Assertion Stretch Enable
 	mov	%eax, PMCON3_ADDR
 
 	mov	$0xa, %eax
@@ -27,6 +27,7 @@ raminit:
 	outb	%al, %dx
 
 2:
+	hlt
 	jmp	2b
 
 test_ok:

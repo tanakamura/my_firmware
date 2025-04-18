@@ -55,6 +55,11 @@ pub fn alloc_from_16(size: usize) -> *mut u8 {
     }
 }
 
+pub fn alloc_from_16t<T>() -> *mut T {
+    let size = core::mem::size_of::<T>();
+    alloc_from_16(size) as *mut T
+}
+
 pub fn free_to_16(ptr: *mut u8, size: usize) {
     unsafe {
         ALLOCATOR_16.lock().deallocate(
@@ -62,4 +67,9 @@ pub fn free_to_16(ptr: *mut u8, size: usize) {
             core::alloc::Layout::from_size_align(size, 8).unwrap(),
         );
     }
+}
+
+pub fn free_to_16t<T>(ptr: *mut T) {
+    let size = core::mem::size_of::<T>();
+    free_to_16(ptr as *mut u8, size);
 }

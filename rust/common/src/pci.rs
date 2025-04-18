@@ -190,12 +190,12 @@ fn assign_resource_recursive(
 }
 
 unsafe extern "C" {
-    static __vgabios_bin_start: u8;
+    //static __vgabios_bin_start: u8;
 }
 
 fn enable_vga_optionrom(pci: &dyn PciConfigIf, dev: &PCIDev) {
-    //let adr = dev.exp_rom.unwrap().addr as *const u8;
-    let adr = &raw const __vgabios_bin_start;
+    let adr = dev.exp_rom.unwrap().addr as *const u8;
+    //let adr = &raw const __vgabios_bin_start;
     unsafe {
         let sig = *(adr as *const u16);
         if sig != 0xaa55 {
@@ -264,10 +264,10 @@ pub fn assign_resource(pci: &dyn PciConfigIf, root: &mut PCIBus) {
     let mut addr = 0x1000;
     assign_resource_recursive(pci, root, AddrSpaceType::Io, &mut addr);
 
-    let mut addr = 0xc0000000;
+    let mut addr = 0x90000000;
     assign_resource_recursive(pci, root, AddrSpaceType::NonPrefetchableMem, &mut addr);
 
-    let mut addr = 0xd0000000;
+    let mut addr = 0xb0000000;
     assign_resource_recursive(pci, root, AddrSpaceType::PrefetchableMem, &mut addr);
 
     enable_devices(pci, root);
@@ -319,9 +319,6 @@ pub fn scan_bus_recurisve(
                     let b0 = pci.read32(dev_adr, 0x10 + bar * 4);
                     let this_bar = bar;
                     bar += 1;
-                    if b0 == 0 {
-                        continue;
-                    }
 
                     let prefetchable = (b0 & (1 << 3)) != 0;
                     let is_io = (b0 & 1) != 0;
@@ -329,9 +326,20 @@ pub fn scan_bus_recurisve(
                     if b0 & (1 << 2) != 0 {
                         // 64bit
                         bar += 1;
+                        if (b0 & 0xffff_fff0) == 0 {
+                            continue;
+                        }
+
+                        pci.write32(dev_adr, 0x10 + bar * 4, 0xffff_ffff);
                         let b1 = pci.read32(dev_adr, 0x10 + bar * 4);
+                        println!(
+                            "BAR[{}] : b0={:#x}, b1={:#x} prefetchable={}, is_io={}, bus={:#x}, dev={:#x}, func={:#x}",
+                            this_bar, b0, b1, prefetchable, is_io, sub_bus, dev, func
+                        );
+
                         let addr = ((b1 as u64) << 32) | (b0 as u64);
-                        let size: u64 = ((b1 & 0xfffffff0) as u64 ^ 0xffff_ffff_ffff_fff0) + 1;
+                        let size: u64 =
+                            ((addr & 0x0000_0000_ffff_fff0) as u64 ^ 0x0000_0000_ffff_ffff) + 1;
                         bars.push(PCIBar {
                             idx: this_bar as u8,
                             addr,
@@ -341,8 +349,16 @@ pub fn scan_bus_recurisve(
                             bit64: true,
                         });
                     } else {
+                        if (b0 & 0xffff_fff0) == 0 {
+                            continue;
+                        }
+
                         let addr = b0 as u64;
-                        let size = ((b0 & 0xfffffff0) ^ 0xffff_ffff) + 1;
+                        let size = if is_io {
+                            ((b0 & 0x0000_fff0) ^ 0x0000_ffff) + 1
+                        } else {
+                            ((b0 & 0xffff_fff0) ^ 0xffff_ffff) + 1
+                        };
                         bars.push(PCIBar {
                             idx: this_bar as u8,
                             addr,

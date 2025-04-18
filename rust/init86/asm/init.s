@@ -77,6 +77,10 @@ init32:
 	cmpb	$'U', %al
 	jne	not_qemu
 
+	mov	$'G', %al
+	mov	$UART_DATA, %dx
+	outb	%al, %dx
+
 	# run in qemu, skip dram initialization
 	jmp	raminit_done
 
@@ -143,14 +147,22 @@ init_uart:
 	mov	$UART_LCR, %dx
 	outb	%al, %dx
 
-	mov	$1f, %ebp
-	jmp	enable_car
-1:
+#	mov	$1f, %ebp
+#	jmp	enable_car
+#1:
+
+	mov	$'G', %al
+	mov	$UART_DATA, %dx
+	outb	%al, %dx
 
 	mov	$1f, %ebp
 	jmp	raminit
 1:
 raminit_done:
+
+	mov	$'O', %al
+	mov	$UART_DATA, %dx
+	outb	%al, %dx
 
 	movl	$__stack_bottom, %esp
 
@@ -191,8 +203,11 @@ raminit_done:
 
 	leal	__BSS_RAM16_START_FLAT32, %edi
 	leal	__BSS_RAM16_SIZE_DW, %ecx
-	xor	%eax, %eax
 	rep	stosl
+
+	mov	$'L', %al
+	mov	$UART_DATA, %dx
+	outb	%al, %dx
 
 	# enable fpu, sse
 	mov	%cr0, %eax
@@ -213,6 +228,16 @@ raminit_done:
 	mov	%eax, 0x400 + 4*2
 
 	call	common_init
+
+	mov	$'F', %al
+	mov	$UART_DATA, %dx
+	outb	%al, %dx
+
+	mov	$0x0d, %al
+	outb	%al, %dx
+	mov	$0x0a, %al
+	outb	%al, %dx
+
 	call	rmain
 
 1:
@@ -231,6 +256,20 @@ gdt_table:
 	.code16
 
 init:
+	cli
+	cld
+
+	mov	$0x1b, %ecx
+	rdmsr
+	test	$(1<<8), %eax
+
+	jnz	bsp
+
+1:
+	hlt
+	jmp	1b
+
+bsp:
 	lgdtl	%cs:gdt
 	mov	%cr0, %eax
 	or	$1, %eax
