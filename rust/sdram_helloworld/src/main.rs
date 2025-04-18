@@ -4,7 +4,7 @@
 use x86::time::rdtsc;
 
 extern crate alloc;
-//use alloc::vec::Vec;
+use alloc::vec::Vec;
 use common::println;
 use common::uart;
 
@@ -20,9 +20,13 @@ extern "C" fn _start() -> i32 {
 
     common::common_init_from_sdram();
     //
-    //    let mut v = Vec::new();
-    //    v.push(1);
-    //    println!("v = {:?}", v.as_mut_ptr());
+    let mut v = Vec::new();
+    v.push(1);
+    println!("v = {:?}", v.as_mut_ptr());
+
+    let p = common::alloc_from_16t::<u32>();
+    println!("ptr16 = {:?}", p);
+    common::free_to_16t(p);
 
     0
 }

@@ -163,10 +163,13 @@ fn assign_resource_recursive(
     *addr = align_up(*addr, bridge_align);
     let mut bridge_end = *addr - 1;
 
-    if bridge_start == bridge_end + 1 {
-        bridge_start = 0;
-        bridge_end = 1;
+    if bridge_start == *addr {
+        bridge_end = 0;
     }
+    //println!(
+    //    "bridge_start={:#x}, bridge_end={:#x}, *addr={:#x}",
+    //    bridge_start, bridge_end, *addr
+    //);
     let bridge_dev_adr = pci.bus_dev_fn_to_adr(bus.self_bus, bus.dev, bus.func);
 
     match addr_type {
@@ -174,16 +177,16 @@ fn assign_resource_recursive(
             pci.write16(
                 bridge_dev_adr,
                 0x1c,
-                ((((bridge_end - 1) >> 12) << 4) | ((bridge_start >> 12) << 12)) as u16,
+                ((((bridge_end) >> 12) << 4) | ((bridge_start >> 12) << 12)) as u16,
             );
         }
         AddrSpaceType::NonPrefetchableMem => {
-            let regval = ((((bridge_end - 1) >> 20) << 20) | ((bridge_start >> 20) << 4)) as u32;
+            let regval = ((((bridge_end) >> 20) << 20) | ((bridge_start >> 20) << 4)) as u32;
 
             pci.write32(bridge_dev_adr, 0x20, regval);
         }
         AddrSpaceType::PrefetchableMem => {
-            let regval = ((((bridge_end - 1) >> 20) << 20) | ((bridge_start >> 20) << 4)) as u32;
+            let regval = ((((bridge_end) >> 20) << 20) | ((bridge_start >> 20) << 4)) as u32;
             pci.write32(bridge_dev_adr, 0x24, regval);
         }
     }
@@ -272,7 +275,7 @@ pub fn assign_resource(pci: &dyn PciConfigIf, root: &mut PCIBus) {
     enable_devices(pci, root);
 }
 
-pub fn scan_bus_recurisve(
+pub fn scan_bus_recursive(
     pci: &dyn PciConfigIf,
     bridge_bus: u8,
     bridge_dev: u8,
@@ -285,11 +288,21 @@ pub fn scan_bus_recurisve(
     pci.write8(bridge_dev_adr, 0x1a, 0xff); // cover all
     *bus_counter += 1;
 
+    //println!(
+    //    "scan bus={:02x}:{:02x}:{:02x}, bus_counter={}, sub_bus={}",
+    //    bridge_bus, bridge_dev, bridge_func, *bus_counter, sub_bus
+    //);
+
     let mut children = Vec::new();
     let mut devs = Vec::new();
     for dev in 0..32 {
         let dev_adr = pci.bus_dev_fn_to_adr(sub_bus as u8, dev, 0);
         let vid = pci.read16(dev_adr, 0);
+        //println!(
+        //    "scan bus.dev: bus={:02x}:{:02x}:{:02x}, dev={:02x}:{:02x}",
+        //    bridge_bus, bridge_dev, bridge_func, sub_bus, dev
+        //);
+
         if vid == 0xffff {
             continue;
         }
@@ -297,6 +310,11 @@ pub fn scan_bus_recurisve(
         let num_func = if (headertyp & 0x80) != 0 { 8 } else { 1 };
         for func in 0..num_func {
             let dev_adr = pci.bus_dev_fn_to_adr(sub_bus as u8, dev, func);
+            //println!(
+            //    "scan bus.dev.func: bus={:02x}:{:02x}:{:02x}, dev={:02x}:{:02x}:{:02x}",
+            //    bridge_bus, bridge_dev, bridge_func, sub_bus, dev, func
+            //);
+
             let vid = pci.read16(dev_adr, 0);
             if vid == 0xffff {
                 continue;
@@ -305,9 +323,8 @@ pub fn scan_bus_recurisve(
 
             if is_bridge {
                 let child =
-                    scan_bus_recurisve(pci, sub_bus as u8, dev as u8, func as u8, bus_counter);
+                    scan_bus_recursive(pci, sub_bus as u8, dev as u8, func as u8, bus_counter);
 
-                pci.write8(dev_adr, 0x1a, *bus_counter as u8); // cover child
                 children.push(child);
             } else {
                 let mut bar = 0;
@@ -331,10 +348,10 @@ pub fn scan_bus_recurisve(
 
                         pci.write32(dev_adr, 0x10 + bar * 4, 0xffff_ffff);
                         let b1 = pci.read32(dev_adr, 0x10 + bar * 4);
-                        println!(
-                            "BAR[{}] : b0={:#x}, b1={:#x} prefetchable={}, is_io={}, bus={:#x}, dev={:#x}, func={:#x}",
-                            this_bar, b0, b1, prefetchable, is_io, sub_bus, dev, func
-                        );
+                        //println!(
+                        //    "BAR[{}] : b0={:#x}, b1={:#x} prefetchable={}, is_io={}, bus={:#x}, dev={:#x}, func={:#x}",
+                        //    this_bar, b0, b1, prefetchable, is_io, sub_bus, dev, func
+                        //);
 
                         let addr = ((b1 as u64) << 32) | (b0 as u64);
                         let size: u64 =
@@ -389,7 +406,16 @@ pub fn scan_bus_recurisve(
             }
         }
     }
-    pci.write8(bridge_dev_adr, 0x1a, *bus_counter); // cover all
+    //println!(
+    //    "scan bus end={:02x}:{:02x}:{:02x}, [{:02x}]-[{:02x}]",
+    //    bridge_bus,
+    //    bridge_dev,
+    //    bridge_func,
+    //    sub_bus,
+    //    (*bus_counter) - 1
+    //);
+
+    pci.write8(bridge_dev_adr, 0x1a, *bus_counter - 1); // cover sub
     return PCIBus {
         devs,
         children,
@@ -407,7 +433,7 @@ pub fn scan_bus(pci: &dyn PciConfigIf, bus: u32, bridge_dev: u8, bridge_func: u8
 
     let mut bus_counter = 0;
 
-    scan_bus_recurisve(pci, bus as u8, bridge_dev, bridge_func, &mut bus_counter)
+    scan_bus_recursive(pci, bus as u8, bridge_dev, bridge_func, &mut bus_counter)
 }
 
 pub fn show_pci(root: &PCIBus, pci: &dyn PciConfigIf) {
@@ -418,13 +444,26 @@ pub fn show_pci(root: &PCIBus, pci: &dyn PciConfigIf) {
 
     let bridge_dev_adr = pci.bus_dev_fn_to_adr(root.self_bus, root.dev, root.func);
 
-    let membase = pci.read32(bridge_dev_adr, 0x20);
-    let pref_membase = pci.read32(bridge_dev_adr, 0x24);
+    let membase_regval = pci.read32(bridge_dev_adr, 0x20);
+    let membase_start = (membase_regval & 0x0000fff0) << 16;
+    let membase_end = (membase_regval & 0xfff00000) + (1024 * 1024) - 1;
+
+    let pref_membase_regval = pci.read32(bridge_dev_adr, 0x24);
+    let pref_membase_start = (pref_membase_regval & 0x0000fff0) << 16;
+    let pref_membase_end = (pref_membase_regval & 0xfff00000) + (1024 * 1024) - 1;
+
     let iobase = pci.read16(bridge_dev_adr, 0x1c);
 
     println!(
-        "{:02x}:{:02x}:{:02x} membase:{:08x}, pref_membase:{:08x}, iobase:{:04x}",
-        root.self_bus, root.dev, root.func, membase, pref_membase, iobase
+        "{:02x}:{:02x}:{:02x} membase:{:#08x}-{:#08x}, pref_membase:{:#08x}-{:#08x}, iobase:{:04x}",
+        root.self_bus,
+        root.dev,
+        root.func,
+        membase_start,
+        membase_end,
+        pref_membase_start,
+        pref_membase_end,
+        iobase
     );
 
     for d in &root.devs {

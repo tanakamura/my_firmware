@@ -4,13 +4,14 @@
 extern crate alloc;
 
 extern crate common;
+use crate::common::pci::PciConfigIf;
 use common::pci;
 use common::println;
 use common::uart;
 
-extern crate flashrom_init86;
-use flashrom_init86 as init86;
-//extern crate init86;
+//extern crate flashrom_init86;
+//use flashrom_init86 as init86;
+extern crate init86;
 fn invoke_int10(regs: &mut init86::X86State) {
     unsafe {
         let service_table = init86::get_service_func_table();
@@ -35,6 +36,24 @@ fn invoke_int10(regs: &mut init86::X86State) {
 
         common::free_to_16(ptr, 0x100);
         println!("ok2");
+    }
+}
+
+const INT10_HANDLER_SIZE: usize = 32;
+
+fn install_dummy_int10_handler() -> *mut u8 {
+    unsafe {
+        let ptr = common::alloc_from_16(32);
+        let bytes = [0xbau8, 0xf8, 0x03, 0xb0, 0x2e, 0xee, 0x31, 0xc0, 0xcf];
+        core::ptr::copy(bytes.as_ptr(), ptr, bytes.len());
+        for i in 0..256 {
+            let ivt = (i * 4) as *mut u16;
+            let ptr_seg = ((ptr as usize >> 4) & 0xf000) as u16;
+            let ptr_off = (ptr as usize & 0xffff) as u16;
+            *ivt = ptr_off;
+            *ivt.offset(1) = ptr_seg;
+        }
+        ptr
     }
 }
 
@@ -75,8 +94,8 @@ fn find_vga<'a>(bus: &'a pci::PCIBus, pci: &dyn pci::PciConfigIf) -> Option<&'a 
 }
 
 unsafe extern "C" {
-    //static mut vgabios_start: u8;
-    //static mut vgabios_end: u8;
+    static mut __vgabios_bin_start: u8;
+    static mut __vgabios_bin_end: u8;
 }
 
 #[repr(C, packed)]
@@ -101,11 +120,22 @@ pub fn main() {
 
     let pciif = common::pci::IOPciConfig {};
 
+    let bdf_addr = pciif.bus_dev_fn_to_adr(0, 0, 0);
+    pciif.write16(bdf_addr, 0x52, 0x0002); // disable igd
+
     let mut pci = common::pci::scan_bus(&pciif, 0, 0, 0);
     common::pci::assign_resource(&pciif, &mut pci);
     common::pci::show_pci(&pci, &pciif);
 
     let vga = find_vga(&pci, &pciif);
+    //unsafe {
+    //    let start = &raw const __vgabios_bin_start as usize;
+    //    let end = &raw const __vgabios_bin_end as usize;
+    //    let len = end - start;
+    //    let dst = 0xc0000 as *mut u8;
+    //    let src = start as *const u8;
+    //    core::ptr::copy(src, dst, len);
+    //}
 
     if let Some(vga) = vga {
         let mut st = unsafe { core::mem::zeroed::<init86::X86State>() };
@@ -124,12 +154,26 @@ pub fn main() {
 
         st.eax = ((vga.bus as u32) << 8) | ((vga.dev as u32) << 3) | (vga.func as u32);
 
-        println!("invoke vga option rom");
+        unsafe {
+            let vga_option_rom = 0x000c_0000 as *const u8;
+            let b0 = *vga_option_rom;
+            let b1 = *vga_option_rom.offset(1);
+
+            if (b0 == 0x55) && (b1 == 0xaa) {
+            } else {
+                println!("VGA option rom not found");
+                return;
+            }
+        }
+
+        let dummy_handler = install_dummy_int10_handler();
+        println!("VGA option rom found. invoke vga option rom");
         let service_table = init86::get_service_func_table();
         unsafe {
             ((*service_table).set_16state)(&st);
             ((*service_table).enter_to_16)();
         }
+        common::free_to_16(dummy_handler, INT10_HANDLER_SIZE);
 
         println!("Returned from vga option rom = {:x}", st.eax);
 
