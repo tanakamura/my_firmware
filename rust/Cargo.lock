@@ -33,6 +33,7 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "init86",
  "linked_list_allocator",
  "x86",
 ]
@@ -50,6 +51,7 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "init86",
+ "linked_list_allocator",
 ]
 
 [[package]]

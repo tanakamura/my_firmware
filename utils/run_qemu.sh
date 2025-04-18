@@ -18,7 +18,6 @@ SERIAL="-serial mon:stdio"
 qemu-system-i386  \
  -vga std \
  -M q35 \
- -smp 2 \
- -accel kvm \
- -m 2G -bios $1 $SERIAL \
+  -s -S \
+  -m 2G -bios $1 $SERIAL \
 

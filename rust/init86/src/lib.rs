@@ -28,8 +28,10 @@ pub struct ServiceFuncTable {
     pub set_16state: extern "C" fn(&X86State),
     pub get_16state: extern "C" fn() -> X86State,
     pub enter_to_16: extern "C" fn(),
+    pub alloc_from_16: extern "C" fn(size: usize) -> *mut u8,
+    pub free_to_16: extern "C" fn(ptr: *mut u8, size: usize),
 }
 
 pub fn get_service_func_table() -> *const ServiceFuncTable {
-    return (0x400 + 0) as *const ServiceFuncTable;
+    return (0xf0000 + 0) as *const ServiceFuncTable;
 }

@@ -4,7 +4,7 @@
 use x86::time::rdtsc;
 
 extern crate alloc;
-use alloc::vec::Vec;
+//use alloc::vec::Vec;
 use common::println;
 use common::uart;
 

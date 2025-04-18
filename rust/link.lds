@@ -125,7 +125,7 @@ SECTIONS {
 
                 service_func_table_in_segment = .;
                 service_func_table_flat32 = service_func_table_in_segment + __RAM16_START_FLAT32;
-                . += 16 * 4;
+                . += 16 * 8;
                 state16_regs_in_segment = .;
                 state16_regs_flat32 = state16_regs_in_segment + __RAM16_START_FLAT32;
                 . += 16 * 4;

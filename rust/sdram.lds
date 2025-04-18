@@ -3,22 +3,28 @@ OUTPUT_FORMAT("binary")
 ENTRY(reset)
 
 
+__RAM16_SEGMENT = 0xF000;
+__RAM16_START_FLAT32 = 0xF0000;
+
 RAM_START = 512M; /* LOADBIN_BASE */
 RAM_SIZE = 256M;
 MEMORY {
-       BDA (rw) : org = 0x400, len = 256
+       REAL_SEGMENT_REGION (rw) : org = __RAM16_START_FLAT32, len = 256
        SDRAM (rwx) : org = RAM_START, len = RAM_SIZE
 }
 
 SECTIONS {
-         bda : {
-                service_func_table = .;
+         real_segment_region : {
+                service_func_table_in_segment = .;
+                service_func_table_flat32 = service_func_table_in_segment + __RAM16_START_FLAT32;
+                . += 16 * 8;
+                state16_regs_in_segment = .;
+                state16_regs_flat32 = state16_regs_in_segment + __RAM16_START_FLAT32;
                 . += 16 * 4;
-                state16_legs = .;
-                . += 16 * 4;
-                state32_esp = .;
+                state32_esp_in_segment = .;
+                state32_esp_flat32 = state32_esp_in_segment + __RAM16_START_FLAT32;
                 . += 4;
-         } > BDA
+         } > REAL_SEGMENT_REGION
 
          .text : {
                __start32 = .;

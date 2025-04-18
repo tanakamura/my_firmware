@@ -258,7 +258,6 @@ fn enable_devices(pci: &dyn PciConfigIf, bus: &mut PCIBus) -> bool {
 }
 
 pub fn assign_resource(pci: &dyn PciConfigIf, root: &mut PCIBus) {
-    let tolud = pci.read8(0, 0x9c) as u32;
     pci.write8(0, 0x9c, 8 << 3); // 1gib
 
     let mut addr = 0x1000;

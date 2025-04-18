@@ -2,7 +2,6 @@
 #![no_std]
 
 extern crate alloc;
-use alloc::vec;
 
 extern crate common;
 use common::pci;
@@ -12,9 +11,6 @@ use common::uart;
 extern crate flashrom_init86;
 use flashrom_init86 as init86;
 //extern crate init86;
-
-use x86::io::{inb, inl, inw, outb, outl, outw};
-
 fn invoke_int10(regs: &mut init86::X86State) {
     unsafe {
         let service_table = init86::get_service_func_table();
@@ -24,6 +20,7 @@ fn invoke_int10(regs: &mut init86::X86State) {
             *ptr.offset(1) = 0x10;
             *ptr.offset(2) = 0xcb; // retf
         }
+        println!("ptr = {:?}", ptr);
 
         regs.cs = (ptr as u32 / 16) & 0xf000;
         regs.eip = ptr as u32 % 65536;
@@ -34,8 +31,10 @@ fn invoke_int10(regs: &mut init86::X86State) {
         ((*service_table).set_16state)(regs);
         ((*service_table).enter_to_16)();
         *regs = ((*service_table).get_16state)();
+        println!("ok");
 
         common::free_to_16(ptr, 0x100);
+        println!("ok2");
     }
 }
 
@@ -76,11 +75,12 @@ fn find_vga<'a>(bus: &'a pci::PCIBus, pci: &dyn pci::PciConfigIf) -> Option<&'a 
 }
 
 unsafe extern "C" {
-    static mut vgabios_start: u8;
-    static mut vgabios_end: u8;
+    //static mut vgabios_start: u8;
+    //static mut vgabios_end: u8;
 }
 
 #[repr(C, packed)]
+#[allow(non_snake_case)]
 struct VgaBiosHeader {
     VbeSignature: [u8; 4],
     VbeVersion: u16,
@@ -96,7 +96,7 @@ struct VgaBiosHeader {
     OemData: [u8; 256],
 }
 
-pub fn main() -> ! {
+pub fn main() {
     println!("Hello test_vga!!");
 
     let pciif = common::pci::IOPciConfig {};
@@ -172,7 +172,7 @@ pub fn main() -> ! {
 
             loop {
                 let mode_val = *ptr.offset(i);
-                if (mode_val == 0xffff) {
+                if mode_val == 0xffff {
                     break;
                 }
                 println!("mode[{}] = {}", i, mode_val);
@@ -189,19 +189,16 @@ pub fn main() -> ! {
 
         common::free_to_16t(vbe_info);
     }
-
-    loop {}
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rmain() -> ! {
+pub extern "C" fn rmain() {
     main();
 }
 
 #[unsafe(link_section = ".text.start")]
 #[unsafe(no_mangle)]
 extern "C" fn _start() -> i32 {
-    common::clear_bss();
     common::common_init_from_sdram();
 
     unsafe {

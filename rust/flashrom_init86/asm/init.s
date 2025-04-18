@@ -221,12 +221,17 @@ raminit_done:
 
 	## setup service function table
 	mov	$set_16state, %eax
-	mov	%eax, 0x400 + 4*0
+	mov	%eax, 0xf0000 + 4*0
 	mov	$get_16state, %eax
-	mov	%eax, 0x400 + 4*1
+	mov	%eax, 0xf0000 + 4*1
 	mov	$enter_to_16, %eax
-	mov	%eax, 0x400 + 4*2
+	mov	%eax, 0xf0000 + 4*2
+	mov	$alloc_from_16, %eax
+	mov	%eax, 0xf0000 + 4*3
+	mov	$free_to_16, %eax
+	mov	%eax, 0xf0000 + 4*4
 
+	call	init_heap16
 	call	common_init_from_flash
 
 	mov	$'F', %al
