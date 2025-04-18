@@ -7,5 +7,6 @@ build = "build.rs"
 
 [dependencies]
 init86 = { path = "../init86" }
+flashrom_init86 = { path = "../flashrom_init86" }
 x86 = "0.52.0"
 common = { path = "../common" }

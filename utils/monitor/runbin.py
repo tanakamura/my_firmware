@@ -13,23 +13,7 @@ def do_ram_command(m, com):
 
 
 def main():
-    global proc
-
-    if sys.argv[1] == "native":
-        import serial.tools.list_ports
-        port = serial.Serial(port='/dev/ttyS0', baudrate=115200 , parity='N', stopbits=1)
-        to_mon = port
-        from_mon = port
-    elif sys.argv[1] == "qemu":
-        monitor.proc = subprocess.Popen(["qemu-system-i386", "-s", "-serial", "mon:stdio", "-bios", "rom_qemu", "-nographic", "-M", "q35", "-m", "1G"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        proc = monitor.proc
-        to_mon = proc.stdin
-        from_mon = proc.stdout
-    else:
-        print("Usage: monitor.py [qemu]")
-        sys.exit(1)
-
-    m = Machine(to_mon, from_mon)
+    m, args = open_machine()
 
     init(m)
 
@@ -38,11 +22,12 @@ def main():
     fifo = inb(m, 0x3fa)
     print(f"fifo = {fifo:x}")
 
-    binary = open(sys.argv[2], "rb").read()
+    binary = open(args.binary, "rb").read()
 
     loadbin(m, binary)
     print("loaded")
     r = runbin(m)
+
     print(f"{r:x}")
 
 

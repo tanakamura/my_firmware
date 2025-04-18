@@ -45,11 +45,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "flashrom_init86"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "init86",
+]
+
+[[package]]
 name = "flashrom_monitor"
 version = "0.1.0"
 dependencies = [
  "common",
- "init86",
+ "flashrom_init86",
  "monitor",
  "x86",
 ]
@@ -57,9 +65,6 @@ dependencies = [
 [[package]]
 name = "init86"
 version = "0.1.0"
-dependencies = [
- "cc",
-]
 
 [[package]]
 name = "linked_list_allocator"
@@ -140,6 +145,7 @@ name = "test_vga"
 version = "0.1.0"
 dependencies = [
  "common",
+ "flashrom_init86",
  "init86",
  "x86",
 ]

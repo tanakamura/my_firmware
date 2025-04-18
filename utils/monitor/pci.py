@@ -8,7 +8,7 @@ import serial
 from monitor import *
 
 def main():
-    m = open_machine()
+    m, args = open_machine()
 
     init(m)
 

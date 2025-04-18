@@ -40,10 +40,11 @@ class Machine:
         self.to_mon = to_mon
         self.from_mon = from_mon
 
-def open_machine() -> Machine:
+def open_machine():
     args = argparse.ArgumentParser()
     args.add_argument("--dev_type", choices=["serial", "uds"], required=True, type=str)
     args.add_argument("--dev_path", required=True, type=str)
+    args.add_argument("--binary", type=str)
 
     args = args.parse_args()
     if args.dev_type == "serial":
@@ -58,7 +59,7 @@ def open_machine() -> Machine:
 
     atexit.register(cleanup)
 
-    return Machine(to_mon, from_mon)
+    return (Machine(to_mon, from_mon), args)
 
 def cleanup():
     global proc
@@ -207,11 +208,18 @@ def runbin(m:Machine):
     data = struct.pack("<B", RUNBIN)
     m.to_mon.write(data)
     m.to_mon.flush()
+
+    while True:
+        c = m.from_mon.read(1)
+        if c == b'\xff':
+            break
+        sys.stdout.buffer.write(c)
+        sys.stdout.flush()
+
     data = m.from_mon.read(4)
     x = struct.unpack("<I", data)[0]
     print(f"runbin: {x:x}")
-    data = m.from_mon.read(4)
-    return struct.unpack("<I", data)[0]
+    return x
 
 def init(m:Machine):
     data = struct.pack("<B", INIT)

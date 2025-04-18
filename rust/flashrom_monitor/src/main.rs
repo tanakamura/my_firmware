@@ -2,7 +2,7 @@
 #![no_std]
 
 extern crate common;
-extern crate init86;
+extern crate flashrom_init86;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rmain() -> ! {

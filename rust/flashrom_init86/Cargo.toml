@@ -1,8 +1,11 @@
 [package]
-name = "init86"
+name = "flashrom_init86"
 version = "0.1.0"
 edition = "2024"
 build = "build.rs"
+
+[dependencies]
+init86 = { path = "../init86" }
 
 [lib]
 crate-type = ["lib"]

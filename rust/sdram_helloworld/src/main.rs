@@ -3,46 +3,26 @@
 
 use x86::time::rdtsc;
 
+extern crate alloc;
+use alloc::vec::Vec;
 use common::println;
 use common::uart;
 
-fn now() -> f64 {
-    let t = unsafe { rdtsc() };
-    t as f64 / 1.6e9
-}
+//fn now() -> f64 {
+//    let t = unsafe { rdtsc() };
+//    t as f64 / 1.6e9
+//}
 
 #[unsafe(link_section = ".text.start")]
 #[unsafe(no_mangle)]
 extern "C" fn _start() -> i32 {
-    for _ in 0..5 {
-        unsafe {
-            let length = 1024 * 1024 * 4;
-            let mem_begin = 0x20000000 as *mut u32;
-            let mem_end = (0x20000000 + length) as *mut u32;
+    println!("Hello, world! from sdram_helloworld");
 
-            let mem_begin2 = mem_end;
-            //let mem_end2 = (mem_begin2 as usize + length) as *mut u32;
-            //let nword = length / 4;
-
-            let t0 = now();
-            core::ptr::write_bytes(mem_begin as *mut u8, 0, length);
-            let t1 = now();
-
-            let d = t1 - t0;
-            let bytes_per_sec = (length as f64) / d;
-            //println!("length={} time={}s", length, d);
-            println!("memset {}[MiB/s]", bytes_per_sec / (1024.0 * 1024.0));
-
-            let t0 = now();
-            core::ptr::copy(mem_begin as *const u8, mem_begin2 as *mut u8, length);
-            let t1 = now();
-
-            let d = t1 - t0;
-            let bytes_per_sec = ((length * 2) as f64) / d;
-            //println!("length={} time={}s", length, d);
-            println!("memcpy {}[MiB/s]", bytes_per_sec / (1024.0 * 1024.0));
-        }
-    }
+    common::common_init_from_sdram();
+    //
+    //    let mut v = Vec::new();
+    //    v.push(1);
+    //    println!("v = {:?}", v.as_mut_ptr());
 
     0
 }

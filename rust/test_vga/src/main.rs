@@ -5,10 +5,13 @@ extern crate alloc;
 use alloc::vec;
 
 extern crate common;
-extern crate init86;
 use common::pci;
 use common::println;
 use common::uart;
+
+extern crate flashrom_init86;
+use flashrom_init86 as init86;
+//extern crate init86;
 
 use x86::io::{inb, inl, inw, outb, outl, outw};
 
@@ -93,8 +96,7 @@ struct VgaBiosHeader {
     OemData: [u8; 256],
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn rmain() -> ! {
+pub fn main() -> ! {
     println!("Hello test_vga!!");
 
     let pciif = common::pci::IOPciConfig {};
@@ -169,14 +171,12 @@ pub extern "C" fn rmain() -> ! {
             let ptr = (seg * 16 + off) as *const u16;
 
             loop {
-                unsafe {
-                    let mode_val = *ptr.offset(i);
-                    if (mode_val == 0xffff) {
-                        break;
-                    }
-                    println!("mode[{}] = {}", i, mode_val);
-                    i += 1;
+                let mode_val = *ptr.offset(i);
+                if (mode_val == 0xffff) {
+                    break;
                 }
+                println!("mode[{}] = {}", i, mode_val);
+                i += 1;
             }
         }
 
@@ -191,4 +191,21 @@ pub extern "C" fn rmain() -> ! {
     }
 
     loop {}
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rmain() -> ! {
+    main();
+}
+
+#[unsafe(link_section = ".text.start")]
+#[unsafe(no_mangle)]
+extern "C" fn _start() -> i32 {
+    common::clear_bss();
+    common::common_init_from_sdram();
+
+    unsafe {
+        main();
+    }
+    0
 }

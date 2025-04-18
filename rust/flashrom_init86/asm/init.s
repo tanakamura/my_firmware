@@ -227,7 +227,7 @@ raminit_done:
 	mov	$enter_to_16, %eax
 	mov	%eax, 0x400 + 4*2
 
-	call	common_init
+	call	common_init_from_flash
 
 	mov	$'F', %al
 	mov	$UART_DATA, %dx

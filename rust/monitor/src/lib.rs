@@ -36,7 +36,7 @@ const UART_LSR: u16 = UART_BASE + 5;
 
 //const LOADBIN_BASE:u32 = 0x80000;
 
-const LOADBIN_BASE: u32 = 0x40_0000;
+const LOADBIN_BASE: u32 = 0x20000000;
 //static mut LOADBIN_BASE: [u8; 128] = [1; 128];
 
 fn uart_get8() -> u8 {
@@ -203,6 +203,7 @@ fn runbin() {
     let entry = unsafe { core::mem::transmute::<u32, unsafe extern "C" fn() -> u32>(LOADBIN_BASE) };
     x86::fence::mfence();
     let v = unsafe { entry() };
+    uart_put8(0xff); // EOF
     uart_put32(v);
 }
 

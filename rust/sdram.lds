@@ -3,7 +3,7 @@ OUTPUT_FORMAT("binary")
 ENTRY(reset)
 
 
-RAM_START = 512M;
+RAM_START = 512M; /* LOADBIN_BASE */
 RAM_SIZE = 256M;
 MEMORY {
        BDA (rw) : org = 0x400, len = 256
@@ -42,6 +42,7 @@ SECTIONS {
 
          . = ALIGN(16);
          .bss : {
+              __BSS_RAM_START = .;
                *(.bss*)
                . = ALIGN(64);
                __end = .;

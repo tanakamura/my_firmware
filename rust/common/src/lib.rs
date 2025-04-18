@@ -20,6 +20,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 unsafe extern "C" {
+    static mut __BSS_RAM_START: u8;
     static mut __end: u8;
     static mut __ram_last: u8;
     static mut __end16_flat32: u8;
@@ -27,15 +28,40 @@ unsafe extern "C" {
 
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn common_init() {
-    // Initialize the heap allocator
+pub fn clear_bss() {
+    /* clear bss */
+    let p0 = &raw mut __BSS_RAM_START;
+    let p1 = &raw mut __end;
+    let len = p1 as usize - p0 as usize;
+    unsafe {
+        core::ptr::write_bytes(p0, 0, len);
+    }
+}
+pub fn common_init_from_sdram() {
+    clear_bss();
+    init_heap32();
+}
+
+fn init_heap32() {
     unsafe {
         let heap_start: *mut u8 = &raw mut __end;
         let heap_size: usize = &raw mut __ram_last as usize - &raw mut __end as usize;
+        println!(
+            "heap_start = {:x} heap_size = {:x}",
+            heap_start as usize, heap_size
+        );
 
         ALLOCATOR.lock().init(heap_start, heap_size);
 
+        println!("heap init done");
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn common_init_from_flash() {
+    init_heap32();
+    // Initialize the heap allocator for real mode
+    unsafe {
         let heap16_start: *mut u8 = &raw mut __end16_flat32;
         let heap16_size: usize = 64 * 1024 - &raw const __end16_in_segment as usize;
 
