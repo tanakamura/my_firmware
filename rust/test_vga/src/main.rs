@@ -155,7 +155,7 @@ pub fn main() {
         st.eax = ((vga.bus as u32) << 8) | ((vga.dev as u32) << 3) | (vga.func as u32);
 
         unsafe {
-            let vga_option_rom = 0x000c_0000 as *const u8;
+            let vga_option_rom = 0x000c_0000 as *mut u8;
             let b0 = *vga_option_rom;
             let b1 = *vga_option_rom.offset(1);
 

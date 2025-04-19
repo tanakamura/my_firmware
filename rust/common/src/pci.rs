@@ -253,7 +253,7 @@ fn enable_devices(pci: &dyn PciConfigIf, bus: &mut PCIBus) -> bool {
     let mut bctrl = pci.read16(bridge_dev_adr, 0x3e);
     bctrl |= 1 << 2; // enable isa
     if has_vga {
-        bctrl |= (1 << 3) | (1 << 4); // decode vga range
+        bctrl |= (1 << 3); // decode vga range
     }
     pci.write16(bridge_dev_adr, 0x3e, bctrl);
 
@@ -453,9 +453,10 @@ pub fn show_pci(root: &PCIBus, pci: &dyn PciConfigIf) {
     let pref_membase_end = (pref_membase_regval & 0xfff00000) + (1024 * 1024) - 1;
 
     let iobase = pci.read16(bridge_dev_adr, 0x1c);
+    let brctl = pci.read16(bridge_dev_adr, 0x3e);
 
     println!(
-        "{:02x}:{:02x}:{:02x} membase:{:#08x}-{:#08x}, pref_membase:{:#08x}-{:#08x}, iobase:{:04x}",
+        "{:02x}:{:02x}:{:02x} membase:{:#08x}-{:#08x}, pref_membase:{:#08x}-{:#08x}, iobase:{:04x}, brctl:{:04x}",
         root.self_bus,
         root.dev,
         root.func,
@@ -463,7 +464,8 @@ pub fn show_pci(root: &PCIBus, pci: &dyn PciConfigIf) {
         membase_end,
         pref_membase_start,
         pref_membase_end,
-        iobase
+        iobase,
+        brctl
     );
 
     for d in &root.devs {

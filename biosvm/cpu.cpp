@@ -1,10 +1,12 @@
+#include <set>
+
 #include "io.hpp"
 #include "vm.hpp"
 
 static void handle_exit_hlt(VM *vm) {
     if (vm->mode == MODE_OPTIONROM) {
         if (vm->cpu->sregs.cs.base == 0xf0000) {
-            int int_num = vm->cpu->regs.rip-1;
+            int int_num = vm->cpu->regs.rip - 1;
 
             if (int_num < 256) {
                 auto &handler = vm->int_handlers[int_num];
@@ -16,7 +18,8 @@ static void handle_exit_hlt(VM *vm) {
                     exit(1);
                 }
             } else {
-                printf("int_num: %x\n", int_num);
+                printf("int_num: %x, cs=%x\n", int_num,
+                       (int)vm->cpu->sregs.cs.base);
                 exit(1);
             }
         } else {
@@ -39,7 +42,7 @@ void run(VM *vm, Connection *conn) {
         single_step.control = KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP;
         ioctl(vm->cpu->vcpu_fd, KVM_SET_GUEST_DEBUG, &single_step);
         disasm(vm, vm->mode);
-        // dump_regs(vm->cpu.get());
+        dump_regs(vm->cpu.get());
     }
     asm volatile("" ::: "memory");
     int r = ioctl(vm->cpu->vcpu_fd, KVM_RUN, NULL);
@@ -52,8 +55,8 @@ void run(VM *vm, Connection *conn) {
     vm->cpu->load_regs_from_vm();
 
     auto run_data = vm->cpu->run_data;
-    bool record = false;
-    bool show = true;
+    bool record = true;
+    bool show = false;
 
     switch (run_data->exit_reason) {
         case KVM_EXIT_HLT:
@@ -189,9 +192,11 @@ void run(VM *vm, Connection *conn) {
                 uintptr_t dp = ((uintptr_t)run_data) + run_data->io.data_offset;
                 if (run_data->io.direction == KVM_EXIT_IO_IN) {
                     uint32_t inv = 0;
-                    printf("io_in%d port=0x%04x, val=", run_data->io.size * 8,
-                           run_data->io.port);
-                    fflush(stdout);
+                    if (show) {
+                        printf("io_in%d port=0x%04x, val=", run_data->io.size * 8,
+                               run_data->io.port);
+                        fflush(stdout);
+                    }
                     switch (run_data->io.size) {
                         case 4:
                             inv = *(uint32_t *)dp =
@@ -221,7 +226,9 @@ void run(VM *vm, Connection *conn) {
                             puts("unknown io");
                             exit(1);
                     }
-                    printf("0x%08x\n", (int)inv);
+                    if (show) {
+                        printf("0x%08x\n", (int)inv);
+                    }
                 } else {
                     switch (run_data->io.size) {
                         case 4:
@@ -283,9 +290,17 @@ void run(VM *vm, Connection *conn) {
                 }
             } else {
                 uintptr_t dp = ((uintptr_t)run_data) + run_data->io.data_offset;
+                int vga_port_begin = 0x3b0;
+                int vga_port_end = 0x3df;
+
                 if (run_data->io.direction == KVM_EXIT_IO_IN) {
                     if (run_data->io.port == 0x3fd) {
-                        *(uint8_t *)dp = (1<<5);
+                        *(uint8_t *)dp = (1 << 5);
+                    } else if (run_data->io.port >= vga_port_begin &&
+                               run_data->io.port <= vga_port_end) {
+                        fprintf(stderr, "VGA io_in port=0x%04x, size=%d\n",
+                                run_data->io.port, run_data->io.size);
+                        *(uint8_t *)dp = 0;
                     } else {
                         fprintf(stderr, "unknown io_in port=0x%04x\n",
                                 run_data->io.port);
@@ -293,6 +308,12 @@ void run(VM *vm, Connection *conn) {
                 } else {
                     if (run_data->io.port == 0x3f8) {
                         putchar(*(uint8_t *)dp);
+                    } else if (run_data->io.port >= vga_port_begin &&
+                               run_data->io.port <= vga_port_end) {
+                        fprintf(stderr,
+                                "VGA io out port=0x%04x, data=%d, size=%d\n",
+                                run_data->io.port, *(uint8_t *)dp,
+                                run_data->io.size);
                     } else {
                         fprintf(stderr, "unknown io_out port=0x%04x\n",
                                 run_data->io.port);
