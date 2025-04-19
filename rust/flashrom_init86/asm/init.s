@@ -81,6 +81,31 @@ init32:
 	mov	$UART_DATA, %dx
 	outb	%al, %dx
 
+	#  init uart
+	# init FIFO
+	mov	$0b00000111, %al
+	mov	$UART_FCR, %dx
+	outb	%al, %dx
+
+	## dlab=1, parity no, stop=1, data=8
+	mov	$0b10000011, %al
+	mov	$UART_LCR, %dx
+	outb	%al, %dx
+
+	# divider = 1, 115200
+	mov	$UART_DIV_LO, %dx
+	mov	$0x1, %al
+	outb	%al, %dx
+	mov	$UART_DIV_HI, %dx
+	mov	$0x0, %al
+	outb	%al, %dx
+
+	## dlab=0, parity no, stop=1, data=8
+	mov	$0b00000011, %al
+	mov	$UART_LCR, %dx
+	outb	%al, %dx
+
+
 	# run in qemu, skip dram initialization
 	jmp	raminit_done
 

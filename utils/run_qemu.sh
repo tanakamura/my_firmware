@@ -4,8 +4,8 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-#SERIAL=-chardev socket,id=monitor,path=/tmp/qemu.socket,server=on -serial chardev:monitor
-SERIAL="-serial mon:stdio"
+SERIAL="-chardev socket,id=monitor,path=/tmp/qemu.socket,server=on,wait=off -serial chardev:monitor -monitor stdio"
+#SERIAL="-serial mon:stdio"
 # -d trace:'pci_cfg_*' \
 
 
@@ -16,8 +16,9 @@ SERIAL="-serial mon:stdio"
 
 
 qemu-system-i386  \
+ -d trace:'serial_*' \
  -vga std \
  -M q35 \
-  -s -S \
+-s -S \
   -m 2G -bios $1 $SERIAL \
 

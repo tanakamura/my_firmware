@@ -168,6 +168,7 @@ pub fn main() {
 
         let dummy_handler = install_dummy_int10_handler();
         println!("VGA option rom found. invoke vga option rom");
+
         let service_table = init86::get_service_func_table();
         unsafe {
             ((*service_table).set_16state)(&st);

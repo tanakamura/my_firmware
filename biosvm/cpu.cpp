@@ -193,8 +193,8 @@ void run(VM *vm, Connection *conn) {
                 if (run_data->io.direction == KVM_EXIT_IO_IN) {
                     uint32_t inv = 0;
                     if (show) {
-                        printf("io_in%d port=0x%04x, val=", run_data->io.size * 8,
-                               run_data->io.port);
+                        printf("io_in%d port=0x%04x, val=",
+                               run_data->io.size * 8, run_data->io.port);
                         fflush(stdout);
                     }
                     switch (run_data->io.size) {

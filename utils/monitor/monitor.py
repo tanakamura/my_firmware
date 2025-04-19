@@ -34,6 +34,8 @@ WRMSR = 15
 LOADBIN = 16
 RUNBIN = 17
 
+LOADBIN16 = 18
+RUNBIN16 = 19
 
 class Machine:
     def __init__(self, to_mon, from_mon):
@@ -186,12 +188,12 @@ def pci_config_write32(m:Machine, bus:int, dev:int, func:int, offset:int, data:i
     outl(m, 0xcf8, (1 << 31) | (bus << 16) | (dev << 11) | (func << 8) | (offset&0xfc))
     return outl(m, 0xcfc+(offset&3), data)
 
-def loadbin(m:Machine, binary):
+def loadbin(m:Machine, binary, cmd:int):
     sumbyte = 0
     for i in binary:
         sumbyte ^= i
 
-    data = struct.pack("<BIB", LOADBIN, len(binary), sumbyte)
+    data = struct.pack("<BIB", cmd, len(binary), sumbyte)
 
     m.to_mon.write(data)
     m.to_mon.flush()
@@ -204,7 +206,13 @@ def loadbin(m:Machine, binary):
         print("loadbin failed")
         sys.exit(1)
 
-def runbin(m:Machine):
+def loadbin32(m:Machine, binary):
+    loadbin(m, binary, LOADBIN)
+
+def loadbin16(m:Machine, binary):
+    loadbin(m, binary, LOADBIN16)
+
+def runbin32(m:Machine):
     data = struct.pack("<B", RUNBIN)
     m.to_mon.write(data)
     m.to_mon.flush()
@@ -219,6 +227,29 @@ def runbin(m:Machine):
     data = m.from_mon.read(4)
     x = struct.unpack("<I", data)[0]
     print(f"runbin: {x:x}")
+    return x
+
+def runbin16(m:Machine, regs:[int]):
+    data = struct.pack("<B", RUNBIN16)
+    m.to_mon.write(data)
+    m.to_mon.flush()
+
+    assert(len(regs) == 14)
+    data = struct.pack('<14I', *regs)
+
+    m.to_mon.write(data)
+    m.to_mon.flush()
+
+    while True:
+        c = m.from_mon.read(1)
+        if c == b'\xff':
+            break
+        sys.stdout.buffer.write(c)
+        sys.stdout.flush()
+
+    data = m.from_mon.read(4 * 14)
+    x = struct.unpack("<14I", data)[0]
+    print(f"runbin16: {x:x}")
     return x
 
 def init(m:Machine):

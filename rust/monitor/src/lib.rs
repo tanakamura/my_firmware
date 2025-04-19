@@ -30,14 +30,15 @@ const WRMSR: u8 = 15;
 const LOADBIN: u8 = 16;
 const RUNBIN: u8 = 17;
 
+const LOADBIN16: u8 = 18;
+const RUNBIN16: u8 = 19;
+
 const UART_BASE: u16 = 0x3f8;
 const UART_DATA: u16 = UART_BASE;
 const UART_LSR: u16 = UART_BASE + 5;
 
-//const LOADBIN_BASE:u32 = 0x80000;
-
 const LOADBIN_BASE: u32 = 0x20000000;
-//static mut LOADBIN_BASE: [u8; 128] = [1; 128];
+const LOADBIN16_BASE: u32 = 0x0001_0000; // seg=0x1000, off=0000
 
 fn uart_get8() -> u8 {
     loop {
@@ -174,7 +175,7 @@ fn wrmsr64() {
     uart_put8(0xfe);
 }
 
-fn loadbin() {
+fn loadbin(off: u32) {
     let len = uart_get32();
     let checksum = uart_get8();
     let mut sum: u8 = 0;
@@ -182,12 +183,12 @@ fn loadbin() {
     for i in 0..len {
         let c = uart_get8();
         unsafe {
-            *((LOADBIN_BASE + i) as *mut u8) = c;
+            *((off + i) as *mut u8) = c;
         };
     }
 
     for i in 0..len {
-        let c = unsafe { *((LOADBIN_BASE + i) as *const u8) };
+        let c = unsafe { *((off + i) as *const u8) };
         sum ^= c;
     }
 
@@ -198,13 +199,50 @@ fn loadbin() {
     }
 }
 
-fn runbin() {
-    //let entry = unsafe { core::mem::transmute::<u32, fn()->u32>(LOADBIN_BASE) };
+fn loadbin32() {
+    loadbin(LOADBIN_BASE);
+}
+
+fn loadbin16() {
+    loadbin(LOADBIN16_BASE);
+}
+
+fn runbin32() {
     let entry = unsafe { core::mem::transmute::<u32, unsafe extern "C" fn() -> u32>(LOADBIN_BASE) };
     x86::fence::mfence();
     let v = unsafe { entry() };
     uart_put8(0xff); // EOF
     uart_put32(v);
+}
+
+fn runbin16() {
+    let size = core::mem::size_of::<init86::X86State>() as isize;
+    let mut st: init86::X86State = unsafe { core::mem::zeroed() };
+
+    unsafe {
+        let st_ptr = (&raw mut st) as *mut u8;
+        for i in 0..size {
+            *(st_ptr.offset(i)) = uart_get8();
+        }
+    }
+
+    uart_put8(b'.');
+
+    let service_func = init86::get_service_func_table();
+    unsafe {
+        ((*service_func).set_16state)(&st);
+        ((*service_func).enter_to_16)();
+    }
+
+    uart_put8(0xff); // EOF
+
+    unsafe {
+        let mut st = ((*service_func).get_16state)();
+        let st_ptr = (&raw mut st) as *mut u8;
+        for i in 0..size {
+            uart_put8(*st_ptr.offset(i));
+        }
+    }
 }
 
 pub fn console_loop() {
@@ -232,8 +270,11 @@ pub fn console_loop() {
             RDMSR => rdmsr64(),
             WRMSR => wrmsr64(),
 
-            LOADBIN => loadbin(),
-            RUNBIN => runbin(),
+            LOADBIN => loadbin32(),
+            RUNBIN => runbin32(),
+
+            LOADBIN16 => loadbin16(),
+            RUNBIN16 => runbin16(),
 
             _ => uart_put8(0xff),
         }

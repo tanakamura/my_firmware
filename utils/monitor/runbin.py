@@ -24,9 +24,9 @@ def main():
 
     binary = open(args.binary, "rb").read()
 
-    loadbin(m, binary)
+    loadbin32(m, binary)
     print("loaded")
-    r = runbin(m)
+    r = runbin32(m)
 
     print(f"{r:x}")
 
