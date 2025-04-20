@@ -13,7 +13,7 @@ pub struct X86State {
     pub ebp: u32,    // 5
     pub esi: u32,    // 6
     pub edi: u32,    // 7
-    pub eflags: u32, // 8, clobberd, unable to pass to real mode
+    pub eflags: u32, // 8
 
     pub es: u32, // 9
     pub ss: u32, // 10

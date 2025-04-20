@@ -2,8 +2,6 @@
 
 extern crate init86;
 
-pub use init86::get_service_func_table;
-pub use init86::ServiceFuncTable;
 pub use init86::X86State;
 use linked_list_allocator::LockedHeap;
 

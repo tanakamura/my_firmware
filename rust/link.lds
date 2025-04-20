@@ -132,6 +132,9 @@ SECTIONS {
                 state32_esp_in_segment = .;
                 state32_esp_flat32 = state32_esp_in_segment + __RAM16_START_FLAT32;
                 . += 4;
+                int_number_in_segment = .;
+                int_number_flat32 = int_number_in_segment + __RAM16_START_FLAT32;
+                . += 4;
 
                KEEP(*(.text16.ram))
                KEEP(*(.rodata16.ram))
