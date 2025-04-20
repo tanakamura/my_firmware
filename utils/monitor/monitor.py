@@ -248,8 +248,7 @@ def runbin16(m:Machine, regs:[int]):
         sys.stdout.flush()
 
     data = m.from_mon.read(4 * 14)
-    x = struct.unpack("<14I", data)[0]
-    print(f"runbin16: {x:x}")
+    x = struct.unpack("<14I", data)
     return x
 
 def init(m:Machine):

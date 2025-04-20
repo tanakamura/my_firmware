@@ -16,4 +16,8 @@ int_handler:
 	mov	%esi, %cs:state16_regs_in_segment + 4*6
 	mov	%edi, %cs:state16_regs_in_segment + 4*7
 
+	pushf
+	pop	%ax
+	mov	%eax, %
+
 

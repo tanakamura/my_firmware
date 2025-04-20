@@ -226,8 +226,6 @@ fn runbin16() {
         }
     }
 
-    uart_put8(b'.');
-
     let service_func = init86::get_service_func_table();
     unsafe {
         ((*service_func).set_16state)(&st);

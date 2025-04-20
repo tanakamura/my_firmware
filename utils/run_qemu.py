@@ -18,7 +18,7 @@ def main():
         exec_args += ["-s", "-S"]
 
     if args.u:
-        exec_args += ["-chardev","socket,id=monitor,path=/tmp/qemu.socket,server=on,wait=off", "-serial", "chardev:monitor", "-monitor stdio"]
+        exec_args += ["-chardev","socket,id=monitor,path=/tmp/qemu.socket,server=on,wait=off", "-serial", "chardev:monitor", "-monitor", "stdio"]
 
     if args.m:
         exec_args += ["-nodefaults", "-readconfig", args.m]
