@@ -107,6 +107,14 @@ switch_to_real_mode:		# seg=0xf000
 	mov	%esi, %cs:state16_regs_in_segment + 4*6
 	mov	%edi, %cs:state16_regs_in_segment + 4*7
 
+	mov	%es, %cs: state16_regs_in_segment + 4*9
+	mov	%ss, %cs: state16_regs_in_segment + 4*10
+	mov	%ds, %cs: state16_regs_in_segment + 4*12
+
+	pushf
+	pop	%ax
+	mov	%eax, %cs: state16_regs_in_segment + 4*8
+
 	## switch to protect mode
 	mov	%cr0, %ebp
 	or	$1, %ebp
