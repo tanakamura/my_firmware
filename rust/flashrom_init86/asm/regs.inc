@@ -16,8 +16,8 @@
 
 	pushf
 	pop	%ax
-	mov	%eax, %cs: state16_regs_in_segment + 4*8
-	mov	%cs:state32_esp_in_segment, %esp
+	mov	%eax, %cs: state16_regs_in_segment + 4*8 # flags
+	mov	%cs: state32_esp_in_segment, %esp
 
 	## switch to protect mode
 	mov	%cr0, %ebp
@@ -59,8 +59,5 @@
 	mov	%cs: state16_regs_in_segment + 4*9, %es # es
 	mov	%cs: state16_regs_in_segment + 4*10, %ss
 	mov	%cs: state16_regs_in_segment + 4*12, %ds
-
-	push	%cs: state16_regs_in_segment + 4*13 # cs
-	push	%cs: state16_regs_in_segment + 4*11 # ip
 
 .endm

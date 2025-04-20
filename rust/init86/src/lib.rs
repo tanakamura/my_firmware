@@ -30,6 +30,7 @@ pub struct ServiceFuncTable {
     pub enter_to_16: extern "C" fn(),
     pub alloc_from_16: extern "C" fn(size: usize) -> *mut u8,
     pub free_to_16: extern "C" fn(ptr: *mut u8, size: usize),
+    pub install_int_handler: extern "C" fn (fptr: unsafe extern "C" fn(), int_num: usize),
 }
 
 pub fn get_service_func_table() -> *const ServiceFuncTable {

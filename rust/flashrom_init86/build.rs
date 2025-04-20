@@ -9,6 +9,7 @@ fn main() -> io::Result<()> {
         .file("asm/cache.s")
         .file("asm/raminit.s")
         .file("asm/modes.s")
+        .file("asm/exceptions.s")
         .compile("asminit");
 
     Ok(())

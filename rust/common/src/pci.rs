@@ -116,7 +116,7 @@ fn assign_resource_recursive(
     };
     *addr = align_up(*addr, bridge_align);
 
-    let mut bridge_start = *addr;
+    let bridge_start = *addr;
 
     for dev in &mut bus.devs {
         let dev_adr = pci.bus_dev_fn_to_adr(dev.bus, dev.dev, dev.func);
@@ -253,7 +253,7 @@ fn enable_devices(pci: &dyn PciConfigIf, bus: &mut PCIBus) -> bool {
     let mut bctrl = pci.read16(bridge_dev_adr, 0x3e);
     bctrl |= 1 << 2; // enable isa
     if has_vga {
-        bctrl |= (1 << 3); // decode vga range
+        bctrl |= 1 << 3; // decode vga range
     }
     pci.write16(bridge_dev_adr, 0x3e, bctrl);
 

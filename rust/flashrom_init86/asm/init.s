@@ -255,8 +255,10 @@ raminit_done:
 	mov	%eax, 0xf0000 + 4*3
 	mov	$free_to_16, %eax
 	mov	%eax, 0xf0000 + 4*4
+	mov	$install_int_handler, %eax
+	mov	%eax, 0xf0000 + 4*5
 
-	call	init_heap16
+	call	flashrom_init86_rs_init
 	call	common_init_from_flash
 
 	mov	$'F', %al

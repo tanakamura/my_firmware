@@ -6,6 +6,7 @@ build = "build.rs"
 
 [dependencies]
 init86 = { path = "../init86" }
+x86 = "0.52.0"
 linked_list_allocator = "0.10.5"
 
 [lib]
