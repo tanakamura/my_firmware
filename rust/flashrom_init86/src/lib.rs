@@ -68,6 +68,7 @@ unsafe extern "C" {
     static mut __end16_flat32: u8;
     static mut __end16_in_segment: u8;
     static mut int_handler_0h: u8;
+    static mut int_handler_4h: u8;
     static mut int_handler_10h: u8;
     static int_number_flat32: u32;
 }
@@ -123,7 +124,23 @@ fn invoke_int10(regs: &mut init86::X86State) {
 }
 
 pub unsafe extern "C" fn put_dot() {
-    outb(0x3f8, b'.');
+    let int_num = int_number_flat32;
+
+    match int_num {
+        0x0 => {
+            // handle 8254 timer
+            outb(0x20, 0x20);
+        }
+
+        0x4 => {
+            // handle uart rx ready
+            outb(0x20, 0x20);
+        }
+        0x10 => {
+            // handle vga dummy
+        }
+        _ => {}
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -140,8 +157,10 @@ pub extern "C" fn flashrom_init86_rs_init() {
 
     /* initialize exceptions */
     install_ivt(0x0, (&raw const int_handler_0h) as u16);
+    install_ivt(0x4, (&raw const int_handler_4h) as u16);
     install_ivt(0x10, (&raw const int_handler_10h) as u16);
     let mut st = unsafe { core::mem::zeroed::<init86::X86State>() };
 
+    install_int_handler(put_dot, 0);
     install_int_handler(put_dot, 0x10);
 }

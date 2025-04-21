@@ -8,11 +8,17 @@ def main():
     a.add_argument('-u', action='store_true', help='use uds serial')
     a.add_argument('-m', type=str, help='machine config path')
     a.add_argument('-t', type=str, help='trace pattern')
+    a.add_argument('-v', action='store_true', help='enable vga')
     a.add_argument('path')
 
     args = a.parse_args()
 
-    exec_args = ["qemu-system-i386", "-vga", "std", "-M", "q35", "-accel", "kvm", "-m", "2G"]
+    exec_args = ["qemu-system-i386", "-M", "q35", "-m", "2G"]
+
+    if args.v:
+        exec_args += ["-vga", "std"]
+    else:
+        exec_args += ["-display", "none"]
 
     if args.g:
         exec_args += ["-s", "-S"]

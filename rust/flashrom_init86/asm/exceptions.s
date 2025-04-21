@@ -4,12 +4,17 @@
 	.section	.text16.ram, "ax"
 
 	.globl	int_handler_0h
+	.globl	int_handler_4h
 	.globl	int_handler_10h
 
 	## real mode
 
 int_handler_0h:
 	movl	$0, %cs:int_number_in_segment
+	jmp	int_handler
+
+int_handler_4h:
+	movl	$0x4, %cs:int_number_in_segment
 	jmp	int_handler
 
 int_handler_10h:

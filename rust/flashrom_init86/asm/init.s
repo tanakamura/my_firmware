@@ -46,6 +46,38 @@
 1:
 .endm
 
+.macro uart_init
+	#  init uart
+	# init FIFO
+	mov	$0b00000111, %al
+	mov	$UART_FCR, %dx
+	outb	%al, %dx
+
+	# enable RX interrupt
+	mov	$0b00000001, %al
+	mov	$UART_IER, %dx
+	outb	%al, %dx
+
+	## dlab=1, parity no, stop=1, data=8
+	mov	$0b10000011, %al
+	mov	$UART_LCR, %dx
+	outb	%al, %dx
+
+	# divider = 1, 115200
+	mov	$UART_DIV_LO, %dx
+	mov	$0x1, %al
+	outb	%al, %dx
+	mov	$UART_DIV_HI, %dx
+	mov	$0x0, %al
+	outb	%al, %dx
+
+	## dlab=0, parity no, stop=1, data=8
+	mov	$0b00000011, %al
+	mov	$UART_LCR, %dx
+	outb	%al, %dx
+.endm
+
+
 	.section .text.init32, "ax"
 	.code32
 
@@ -77,32 +109,10 @@ init32:
 	cmpb	$'U', %al
 	jne	not_qemu
 
+	uart_init
+
 	mov	$'G', %al
 	mov	$UART_DATA, %dx
-	outb	%al, %dx
-
-	#  init uart
-	# init FIFO
-	mov	$0b00000111, %al
-	mov	$UART_FCR, %dx
-	outb	%al, %dx
-
-	## dlab=1, parity no, stop=1, data=8
-	mov	$0b10000011, %al
-	mov	$UART_LCR, %dx
-	outb	%al, %dx
-
-	# divider = 1, 115200
-	mov	$UART_DIV_LO, %dx
-	mov	$0x1, %al
-	outb	%al, %dx
-	mov	$UART_DIV_HI, %dx
-	mov	$0x0, %al
-	outb	%al, %dx
-
-	## dlab=0, parity no, stop=1, data=8
-	mov	$0b00000011, %al
-	mov	$UART_LCR, %dx
 	outb	%al, %dx
 
 
@@ -149,28 +159,7 @@ init_superio_uart:
 	out	%al, %dx
 
 init_uart:
-	# init FIFO
-	mov	$0b00000111, %al
-	mov	$UART_FCR, %dx
-	outb	%al, %dx
-
-	## dlab=1, parity no, stop=1, data=8
-	mov	$0b10000011, %al
-	mov	$UART_LCR, %dx
-	outb	%al, %dx
-
-	# divider = 1, 115200
-	mov	$UART_DIV_LO, %dx
-	mov	$0x1, %al
-	outb	%al, %dx
-	mov	$UART_DIV_HI, %dx
-	mov	$0x0, %al
-	outb	%al, %dx
-
-	## dlab=0, parity no, stop=1, data=8
-	mov	$0b00000011, %al
-	mov	$UART_LCR, %dx
-	outb	%al, %dx
+	uart_init
 
 #	mov	$1f, %ebp
 #	jmp	enable_car
@@ -228,6 +217,10 @@ raminit_done:
 
 	leal	__BSS_RAM16_START_FLAT32, %edi
 	leal	__BSS_RAM16_SIZE_DW, %ecx
+	rep	stosl
+
+	movl	$0x400, %edi
+	movl	$256/4, %ecx
 	rep	stosl
 
 	mov	$'L', %al
@@ -293,7 +286,11 @@ init:
 
 	mov	$0x1b, %ecx
 	rdmsr
-	test	$(1<<8), %eax
+	mov	%eax, %ebp
+	and	$~(1<<11), %eax # disable local APIC to use 8259 PIC
+	wrmsr
+
+	test	$(1<<8), %ebp
 
 	jnz	bsp
 

@@ -10,8 +10,7 @@ use common::println;
 use common::uart;
 
 //extern crate flashrom_init86;
-//use flashrom_init86 as init86;
-extern crate init86;
+use init86;
 fn invoke_int10(regs: &mut init86::X86State) {
     unsafe {
         let service_table = init86::get_service_func_table();
