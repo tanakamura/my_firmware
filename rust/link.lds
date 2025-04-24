@@ -2,7 +2,7 @@ OUTPUT_ARCH("i386")
 OUTPUT_FORMAT("binary")
 TARGET("binary")
 ENTRY(reset)
-/*INPUT (./vgabios.bin)*/
+INPUT (./vgabios.bin)
 
 ROM_FULL_SIZE = 256K;
 ROM16_SIZE = 4K;
@@ -90,7 +90,7 @@ SECTIONS {
                *(.text.*)
                *(.rodata* .rdata* .rodata..*)
                __vgabios_bin_start = .;
-               /*./vgabios.bin*/
+               ./vgabios.bin
                __vgabios_bin_end = .;
                *(.data* .rwdata*)
                . = ALIGN(16);

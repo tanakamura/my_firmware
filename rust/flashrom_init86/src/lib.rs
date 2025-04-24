@@ -100,30 +100,7 @@ pub extern "C" fn install_int_handler(fptr: unsafe extern "C" fn(), int_num: usi
     }
 }
 
-fn invoke_int10(regs: &mut init86::X86State) {
-    unsafe {
-        let ptr = alloc_from_16(0x100);
-        {
-            *ptr.offset(0) = 0xcd;
-            *ptr.offset(1) = 0x10;
-            *ptr.offset(2) = 0xcb; // retf
-        }
-
-        regs.cs = (ptr as u32 / 16) & 0xf000;
-        regs.eip = ptr as u32 % 65536;
-        regs.ds = regs.cs;
-        regs.ss = regs.cs;
-        regs.esp = 0xfffc;
-
-        set_16state(regs);
-        enter_to_16();
-        *regs = get_16state();
-
-        free_to_16(ptr, 0x100);
-    }
-}
-
-pub unsafe extern "C" fn put_dot() {
+pub unsafe extern "C" fn ignore_interrupt() {
     let int_num = int_number_flat32;
 
     match int_num {
@@ -134,8 +111,10 @@ pub unsafe extern "C" fn put_dot() {
 
         0x4 => {
             // handle uart rx ready
+            let b = inb(0x3f8);
             outb(0x20, 0x20);
         }
+
         0x10 => {
             // handle vga dummy
         }
@@ -161,6 +140,25 @@ pub extern "C" fn flashrom_init86_rs_init() {
     install_ivt(0x10, (&raw const int_handler_10h) as u16);
     let mut st = unsafe { core::mem::zeroed::<init86::X86State>() };
 
-    install_int_handler(put_dot, 0);
-    install_int_handler(put_dot, 0x10);
+    install_int_handler(ignore_interrupt, 0);
+    install_int_handler(ignore_interrupt, 0x4);
+    install_int_handler(ignore_interrupt, 0x10);
+
+    unsafe {
+        outb(0x20, 0x11); // ICW1
+        outb(0xa0, 0x11); // ICW1
+        outb(0x21, 0x00); // ICW2
+        outb(0xa1, 0x08); // ICW2, offset=8
+        outb(0x21, 0x04); // ICW3, 2=slave
+        outb(0xa1, 0x02); // ICW3, cascade to 2
+        outb(0x21, 0x01); // ICW4, 8086
+        outb(0xa1, 0x01); // ICW4, 8086
+
+        outb(0x21, 0xee); // OCW1, enable irq 0
+        outb(0xa1, 0xff); // OCW1, disable all
+
+        outb(0x43, 0x34); // start PIT
+        outb(0x40, 0);
+        outb(0x40, 0);
+    }
 }

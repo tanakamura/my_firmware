@@ -32,8 +32,7 @@ def main():
     regs[6] = 0 #esi
     regs[7] = 0 #edi
 
-    regs[8] = 0 #eflags
-
+    regs[8] = 0 #eflags, EI=1
 
     seg = 0x1000
     regs[9] = seg # es

@@ -94,6 +94,10 @@ pub struct PCIBus {
 
     pub dev: u8,
     pub func: u8,
+
+    pub valid_io: bool,
+    pub valid_mem: bool,
+    pub valid_pref_mem: bool,
 }
 
 #[derive(PartialEq, Copy, Clone, Debug)]
@@ -163,13 +167,15 @@ fn assign_resource_recursive(
     *addr = align_up(*addr, bridge_align);
     let mut bridge_end = *addr - 1;
 
+    let mut valid = true;
     if bridge_start == *addr {
         bridge_end = 0;
+        valid = false;
     }
-    //println!(
-    //    "bridge_start={:#x}, bridge_end={:#x}, *addr={:#x}",
-    //    bridge_start, bridge_end, *addr
-    //);
+    println!(
+        "bridge_start={:#x}, bridge_end={:#x}, *addr={:#x}, valid={}",
+        bridge_start, bridge_end, *addr, valid
+    );
     let bridge_dev_adr = pci.bus_dev_fn_to_adr(bus.self_bus, bus.dev, bus.func);
 
     match addr_type {
@@ -177,17 +183,20 @@ fn assign_resource_recursive(
             pci.write16(
                 bridge_dev_adr,
                 0x1c,
-                ((((bridge_end) >> 12) << 4) | ((bridge_start >> 12) << 12)) as u16,
+                ((((bridge_end) >> 12) << 4) | ((bridge_start >> 12) << 16)) as u16,
             );
+            bus.valid_io = valid;
         }
         AddrSpaceType::NonPrefetchableMem => {
             let regval = ((((bridge_end) >> 20) << 20) | ((bridge_start >> 20) << 4)) as u32;
 
             pci.write32(bridge_dev_adr, 0x20, regval);
+            bus.valid_mem = valid;
         }
         AddrSpaceType::PrefetchableMem => {
             let regval = ((((bridge_end) >> 20) << 20) | ((bridge_start >> 20) << 4)) as u32;
             pci.write32(bridge_dev_adr, 0x24, regval);
+            bus.valid_pref_mem = valid;
         }
     }
 }
@@ -226,15 +235,27 @@ fn enable_vga_optionrom(pci: &dyn PciConfigIf, dev: &PCIDev) {
 fn enable_devices(pci: &dyn PciConfigIf, bus: &mut PCIBus) -> bool {
     let bridge_dev_adr = pci.bus_dev_fn_to_adr(bus.self_bus, bus.dev, bus.func);
     let mut cmd = pci.read16(bridge_dev_adr, 0x4);
-    cmd |= 0x7; // enable mem, io, busmaster
+    cmd &= !3;
+    if bus.valid_io {
+        cmd |= 0x1; // enable io
+    }
+    if bus.valid_mem | bus.valid_io {
+        cmd |= 0x2; // enable mem
+    }
+    cmd |= 0x4; // enable bus master
     pci.write16(bridge_dev_adr, 0x4, cmd);
+    pci.write8(bridge_dev_adr, 0x0b, 0x40); // latency timer
+    pci.write8(bridge_dev_adr, 0x1b, 0x40); // secondary latency timer
+    pci.write8(bridge_dev_adr, 0x0c, 64 >> 2); // cache line size
 
     let mut has_vga = false;
     for dev in &mut bus.devs {
         let dev_adr = pci.bus_dev_fn_to_adr(dev.bus, dev.dev, dev.func);
         let mut cmd = pci.read16(dev_adr, 0x4);
+        pci.write8(dev_adr, 0x0b, 0x40); // latency timer
         cmd |= 0x7; // enable mem, io, busmaster
         pci.write16(dev_adr, 0x4, cmd);
+        pci.write8(dev_adr, 0x0c, 64 >> 2); // cache line size
 
         let class_code = pci.read16(dev_adr, 0x0a);
         if class_code == 0x0300 {
@@ -251,9 +272,15 @@ fn enable_devices(pci: &dyn PciConfigIf, bus: &mut PCIBus) -> bool {
     }
 
     let mut bctrl = pci.read16(bridge_dev_adr, 0x3e);
-    bctrl |= 1 << 2; // enable isa
+    bctrl |= (1 << 2); // enable isa
     if has_vga {
-        bctrl |= 1 << 3; // decode vga range
+        bctrl |= (1 << 3) | (1 << 4); // decode vga range
+        println!(
+            "enable bridge VGACTL : {:02x}:{:02x}:{:02x}",
+            bus.self_bus, bus.dev, bus.func
+        );
+        cmd |= 0x1; // enable io
+        pci.write16(bridge_dev_adr, 0x4, cmd);
     }
     pci.write16(bridge_dev_adr, 0x3e, bctrl);
 
@@ -261,9 +288,9 @@ fn enable_devices(pci: &dyn PciConfigIf, bus: &mut PCIBus) -> bool {
 }
 
 pub fn assign_resource(pci: &dyn PciConfigIf, root: &mut PCIBus) {
-    pci.write8(0, 0x9c, 8 << 3); // 1gib
+    pci.write8(0, 0x9c, 8 << 3); // tolud = 1gib
 
-    let mut addr = 0x1000;
+    let mut addr = 0x8000;
     assign_resource_recursive(pci, root, AddrSpaceType::Io, &mut addr);
 
     let mut addr = 0x90000000;
@@ -424,6 +451,9 @@ pub fn scan_bus_recursive(
         sub_bus_end: *bus_counter as u8,
         dev: bridge_dev,
         func: bridge_func,
+        valid_io: false,
+        valid_mem: false,
+        valid_pref_mem: false,
     };
 }
 
@@ -453,10 +483,14 @@ pub fn show_pci(root: &PCIBus, pci: &dyn PciConfigIf) {
     let pref_membase_end = (pref_membase_regval & 0xfff00000) + (1024 * 1024) - 1;
 
     let iobase = pci.read16(bridge_dev_adr, 0x1c);
+    let iobase_start = (iobase & 0x00f0) << 8;
+    let iobase_end = (iobase & 0xf000) + (4096 - 1);
+
     let brctl = pci.read16(bridge_dev_adr, 0x3e);
+    let command = pci.read16(bridge_dev_adr, 0x04);
 
     println!(
-        "{:02x}:{:02x}:{:02x} membase:{:#08x}-{:#08x}, pref_membase:{:#08x}-{:#08x}, iobase:{:04x}, brctl:{:04x}",
+        "{:02x}:{:02x}:{:02x} membase:{:#08x}-{:#08x}, pref_membase:{:#08x}-{:#08x}, iobase:{:04x}-{:04x}, brctl:{:04x}, command:{:04x}",
         root.self_bus,
         root.dev,
         root.func,
@@ -464,17 +498,22 @@ pub fn show_pci(root: &PCIBus, pci: &dyn PciConfigIf) {
         membase_end,
         pref_membase_start,
         pref_membase_end,
-        iobase,
-        brctl
+        iobase_start,
+        iobase_end,
+        brctl,
+        command
     );
 
     for d in &root.devs {
-        let devid = pci.read16(pci.bus_dev_fn_to_adr(d.bus, d.dev, d.func), 0x02);
-        let vid = pci.read16(pci.bus_dev_fn_to_adr(d.bus, d.dev, d.func), 0x00);
+        let dev_adr = pci.bus_dev_fn_to_adr(d.bus, d.dev, d.func);
+        let devid = pci.read16(dev_adr, 0x02);
+        let vid = pci.read16(dev_adr, 0x00);
+
+        let command = pci.read16(dev_adr, 0x04);
 
         println!(
-            "{:02x}:{:02x}:{:02x}, vendor={:04x}, dev={:04x}",
-            d.bus, d.dev, d.func, vid, devid
+            "{:02x}:{:02x}:{:02x}, vendor={:04x}, dev={:04x}, command={:04x}",
+            d.bus, d.dev, d.func, vid, devid, command
         );
         for bar in &d.bars {
             println!(

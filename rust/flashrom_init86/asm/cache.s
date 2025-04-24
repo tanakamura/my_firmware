@@ -68,26 +68,30 @@ enable_sdram_cache:
 	andl	%ebx, %eax
 	wrmsr
 
-.macro fixed_set_6 msr
+.macro fixed_mtrr_set msr
 	mov	$\msr, %ecx
 	wrmsr
 .endm
 
-	mov	$0x06060606, %eax
+	mov	$0x06060606, %eax # WB
 	mov	%eax, %edx
 
-	fixed_set_6	0x250
-	fixed_set_6	0x258
-	fixed_set_6	0x259
-	fixed_set_6	0x259
-	fixed_set_6	0x268
-	fixed_set_6	0x269
-	fixed_set_6	0x26A
-	fixed_set_6	0x26B
-	fixed_set_6	0x26C
-	fixed_set_6	0x26D
-	fixed_set_6	0x26E
-	fixed_set_6	0x26F
+	fixed_mtrr_set	0x250 	# 0x0_0000-0x7_ffff 64k
+	fixed_mtrr_set	0x258	# 0x8_0000-0x9_ffff 16k
+	fixed_mtrr_set	0x268   # 0xc_0000-0xc_8fff 4k
+	fixed_mtrr_set	0x269   # 0xc_8000-0xc_ffff 4k
+	fixed_mtrr_set	0x26A   # 0xd_0000-0xd_8fff 4k
+	fixed_mtrr_set	0x26B   # 0xd_8000-0xd_ffff 4k
+	fixed_mtrr_set	0x26C   # 0xe_0000-0xe_8fff 4k
+	fixed_mtrr_set	0x26D   # 0xe_8000-0xe_ffff 4k
+	fixed_mtrr_set	0x26E   # 0xf_0000-0xf_8fff 4k
+	fixed_mtrr_set	0x26F   # 0xf_8000-0xf_ffff 4k
+
+	mov	$0x01010101, %eax # WC
+	mov	%eax, %edx
+
+	fixed_mtrr_set	0x259	# 0xa_0000-0xb_ffff 16k (VGA)
+
 
 	## wb : 0x0000_0000 - 0x7fffffff (SDRAM)
 	xor	%edx, %edx

@@ -8,13 +8,15 @@ use crate::common::pci::PciConfigIf;
 use common::pci;
 use common::println;
 use common::uart;
+use core::arch::asm;
 
-//extern crate flashrom_init86;
+extern crate flashrom_init86;
 use init86;
 fn invoke_int10(regs: &mut init86::X86State) {
     unsafe {
         let service_table = init86::get_service_func_table();
         let ptr = common::alloc_from_16(0x100);
+
         {
             *ptr.offset(0) = 0xcd;
             *ptr.offset(1) = 0x10;
@@ -38,14 +40,13 @@ fn invoke_int10(regs: &mut init86::X86State) {
     }
 }
 
-const INT10_HANDLER_SIZE: usize = 32;
-
+//const INT10_HANDLER_SIZE: usize = 32;
 fn install_dummy_int10_handler() -> *mut u8 {
     unsafe {
         let ptr = common::alloc_from_16(32);
         let bytes = [0xbau8, 0xf8, 0x03, 0xb0, 0x2e, 0xee, 0x31, 0xc0, 0xcf];
         core::ptr::copy(bytes.as_ptr(), ptr, bytes.len());
-        for i in 0..256 {
+        for i in 1..32 {
             let ivt = (i * 4) as *mut u16;
             let ptr_seg = ((ptr as usize >> 4) & 0xf000) as u16;
             let ptr_off = (ptr as usize & 0xffff) as u16;
@@ -114,6 +115,42 @@ struct VgaBiosHeader {
     OemData: [u8; 256],
 }
 
+extern "C" fn handle_int10() {
+    let service_table = init86::get_service_func_table();
+    let mut st = unsafe { ((*service_table).get_16state)() };
+
+    st.eflags |= 0x0001; // set carry flag
+
+    unsafe { ((*service_table).set_16state)(&st) };
+}
+extern "C" fn handle_int00() {
+    let service_table = init86::get_service_func_table();
+    let mut st = unsafe { ((*service_table).get_16state)() };
+    println!("pc = {:#x}", st.eip);
+    unsafe {
+        x86::io::outb(0x20, 0x20);
+    };
+}
+
+extern "C" fn handle_int42() {
+    println!("handle_int42");
+}
+extern "C" fn handle_int4() {
+    println!("handle_int4");
+    // handle uart rx ready
+    unsafe {
+        let b = x86::io::inb(0x3f8);
+        x86::io::outb(0x20, 0x20);
+
+        let service_table = init86::get_service_func_table();
+        let mut st = unsafe { ((*service_table).get_16state)() };
+        println!("UART RX PC=: {:x}, b={:x}", st.eip, b);
+    }
+}
+extern "C" fn handle_int3() {
+    println!("handle_int3");
+}
+
 pub fn main() {
     println!("Hello test_vga!!");
 
@@ -121,6 +158,7 @@ pub fn main() {
 
     let bdf_addr = pciif.bus_dev_fn_to_adr(0, 0, 0);
     pciif.write16(bdf_addr, 0x52, 0x0002); // disable igd
+    pciif.write16(bdf_addr, 0x54, 0x0001); // disable igd, pciex
 
     let mut pci = common::pci::scan_bus(&pciif, 0, 0, 0);
     common::pci::assign_resource(&pciif, &mut pci);
@@ -141,15 +179,20 @@ pub fn main() {
         // init optionrom
         st.cs = 0xc000;
         st.eip = 0x0003;
-        st.esp = 0xfffc;
 
-        st.ss = 0xf000;
-        st.ds = 0xf000;
-        st.es = 0xf000;
+        st.ss = 0x0000;
+        st.esp = 0x1000; // ??
+
+        st.ds = 0x0040;
+        st.es = 0x0000;
+        st.eflags = 0;
 
         st.ebx = 0xffff;
-        st.edx = 0xffff;
+        st.ecx = 0xffff;
+
+        st.edx = 0;
         st.edi = 0;
+        st.esi = 0;
 
         st.eax = ((vga.bus as u32) << 8) | ((vga.dev as u32) << 3) | (vga.func as u32);
 
@@ -165,15 +208,19 @@ pub fn main() {
             }
         }
 
-        let dummy_handler = install_dummy_int10_handler();
         println!("VGA option rom found. invoke vga option rom");
 
         let service_table = init86::get_service_func_table();
         unsafe {
+            //((*service_table).install_int_handler)(handle_int00, 0x0);
+            ((*service_table).install_int_handler)(handle_int10, 0x10);
+            //((*service_table).install_int_handler)(handle_int42, 0x42);
+            //((*service_table).install_int_handler)(handle_int3, 0x3);
+            //((*service_table).install_int_handler)(handle_int4, 0x4);
+
             ((*service_table).set_16state)(&st);
             ((*service_table).enter_to_16)();
         }
-        common::free_to_16(dummy_handler, INT10_HANDLER_SIZE);
 
         println!("Returned from vga option rom = {:x}", st.eax);
 
@@ -198,10 +245,6 @@ pub fn main() {
 
         println!("get vbe info {:x}", st.eax);
 
-        st.eax = 0x4f02;
-        st.ebx = 0x3; // set mode = 0x3
-        invoke_int10(&mut st);
-
         unsafe {
             println!(
                 "modes_ptr = {:x} {:x}",
@@ -224,12 +267,28 @@ pub fn main() {
             }
         }
 
-        println!("set mode to 0x003 = {:x}", st.eax);
+        let mode = 0x3;
+        st.eax = 0x4f02;
+        st.ebx = mode; // set mode = 0x3
+        invoke_int10(&mut st);
+        println!("set mode to {:x} = {:x}", mode, st.eax);
 
+        let msg = "Hello from My Firmware!!";
+        let msg_ptr = common::alloc_from_16(msg.len()) as *mut u8;
         unsafe {
-            let ptr = 0xb8000 as *mut u8;
-            *ptr = b'a';
+            core::ptr::copy_nonoverlapping(msg.as_ptr(), msg_ptr, msg.len());
         }
+
+        /* display */
+        st.eax = (0x1300 | 1) as u32;
+        st.ebx = 7;
+        st.ecx = msg.len() as u32;
+        st.es = msg_ptr as u32 / 16 & 0xf000;
+        st.ebp = msg_ptr as u32 & 0xffff;
+        st.edx = 0x0000;
+        invoke_int10(&mut st);
+
+        common::free_to_16(msg_ptr, msg.len());
 
         common::free_to_16t(vbe_info);
     }

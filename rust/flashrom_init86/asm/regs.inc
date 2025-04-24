@@ -1,4 +1,4 @@
-
+# -*- asm -*-
 .macro  switch_regs_real_to_protect
 	##  see lib.rs::X86State
 	mov	%eax, %cs:state16_regs_in_segment + 4*0

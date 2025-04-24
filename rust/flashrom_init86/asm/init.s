@@ -134,6 +134,10 @@ init_lpc:
 	mov $((1<<12)|(1<<0)), %cx
 	pci_write_config16 0, 0x1f, 0x0, 0x82
 
+	// comA=0x3f8, comB=0x2f8
+	mov $0x0040, %cx
+	pci_write_config16 0, 0x1f, 0x0, 0x80
+
 init_superio_uart:
 	# enter conf state
 	mov	$0x55, %al
@@ -149,6 +153,8 @@ init_superio_uart:
 	# iobase = 0x60=0x300, 0x61=0x0f8
 	superio_write $0x60, $0x3
 	superio_write $0x61, $0xf8
+	# irq = 4
+	superio_write $0x70, $0x4
 
 	# enable uart
 	superio_write $0x30, $0x1
@@ -200,6 +206,19 @@ raminit_done:
 	mov	$0x33, %cl
 	pci_write_config8 0x00, 0x00, 0x00, 0x96
 
+
+	## fill conventional memory
+	movl	$0, %edi
+	movl	$(640*1024/4), %ecx
+	mov	$-1, %eax
+	rep	stosl
+
+	movl	$0x100000, %edi
+	movl	$(15*1024*1024/4), %ecx
+	rep	stosl
+
+	xorl	%eax, %eax
+
 	leal	__LOAD_ROM_START, %esi
 	leal	__LOAD_RAM_START, %edi
 	leal	__LOAD_SIZE_DW, %ecx
@@ -212,7 +231,6 @@ raminit_done:
 
 	leal	__BSS_RAM_START, %edi
 	leal	__BSS_RAM_SIZE_DW, %ecx
-	xor	%eax, %eax
 	rep	stosl
 
 	leal	__BSS_RAM16_START_FLAT32, %edi

@@ -23,6 +23,16 @@ int_handler_10h:
 
 
 int_handler:
+	push	%ax
+	push	%bp
+	mov	%sp, %bp
+        mov     4(%bp), %ax 	# ip
+	mov	%ax, %cs: state16_regs_in_segment + 4*11
+        mov     6(%bp), %ax	# cs
+	mov	%ax, %cs: state16_regs_in_segment + 4*13
+	pop	%bp
+	pop	%ax
+
 	switch_regs_real_to_protect
 
 	ljmpl	$0x10, $invoke_int_handler
