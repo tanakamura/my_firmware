@@ -1,8 +1,6 @@
 #![no_main]
 #![no_std]
 
-use x86::time::rdtsc;
-
 extern crate alloc;
 use alloc::vec::Vec;
 use common::println;

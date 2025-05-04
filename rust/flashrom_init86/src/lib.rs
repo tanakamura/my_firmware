@@ -45,13 +45,11 @@ pub extern "C" fn get_16state() -> X86State {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn alloc_from_16(size: usize) -> *mut u8 {
-    unsafe {
-        let mut heap16 = ALLOCATOR_16.lock();
-        let ptr = heap16
-            .allocate_first_fit(core::alloc::Layout::from_size_align(size, 8).unwrap())
-            .unwrap();
-        ptr.as_ptr()
-    }
+    let mut heap16 = ALLOCATOR_16.lock();
+    let ptr = heap16
+        .allocate_first_fit(core::alloc::Layout::from_size_align(size, 8).unwrap())
+        .unwrap();
+    ptr.as_ptr()
 }
 
 #[unsafe(no_mangle)]
@@ -81,12 +79,12 @@ fn install_ivt(int_num: u8, handler: u16) {
     }
 }
 
-static mut int_handler_table: [Option<unsafe extern "C" fn()>; 256] = [None; 256];
+static mut INT_HANDLER_TABLE: [Option<unsafe extern "C" fn()>; 256] = [None; 256];
 
 #[unsafe(no_mangle)]
 pub extern "C" fn handle_exceptions() {
     unsafe {
-        let fp = int_handler_table[int_number_flat32 as usize];
+        let fp = INT_HANDLER_TABLE[int_number_flat32 as usize];
         if let Some(fp) = fp {
             fp();
         }
@@ -96,29 +94,31 @@ pub extern "C" fn handle_exceptions() {
 #[unsafe(no_mangle)]
 pub extern "C" fn install_int_handler(fptr: unsafe extern "C" fn(), int_num: usize) {
     unsafe {
-        int_handler_table[int_num] = Some(fptr);
+        INT_HANDLER_TABLE[int_num] = Some(fptr);
     }
 }
 
 pub unsafe extern "C" fn ignore_interrupt() {
-    let int_num = int_number_flat32;
+    unsafe {
+        let int_num = int_number_flat32;
 
-    match int_num {
-        0x0 => {
-            // handle 8254 timer
-            outb(0x20, 0x20);
-        }
+        match int_num {
+            0x0 => {
+                // handle 8254 timer
+                outb(0x20, 0x20);
+            }
 
-        0x4 => {
-            // handle uart rx ready
-            let b = inb(0x3f8);
-            outb(0x20, 0x20);
-        }
+            0x4 => {
+                // handle uart rx ready
+                let _ = inb(0x3f8);
+                outb(0x20, 0x20);
+            }
 
-        0x10 => {
-            // handle vga dummy
+            0x10 => {
+                // handle vga dummy
+            }
+            _ => {}
         }
-        _ => {}
     }
 }
 
@@ -138,7 +138,6 @@ pub extern "C" fn flashrom_init86_rs_init() {
     install_ivt(0x0, (&raw const int_handler_0h) as u16);
     install_ivt(0x4, (&raw const int_handler_4h) as u16);
     install_ivt(0x10, (&raw const int_handler_10h) as u16);
-    let mut st = unsafe { core::mem::zeroed::<init86::X86State>() };
 
     install_int_handler(ignore_interrupt, 0);
     install_int_handler(ignore_interrupt, 0x4);

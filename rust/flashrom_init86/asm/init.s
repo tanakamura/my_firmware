@@ -30,6 +30,14 @@
 	out	\AX, %dx
 .endm
 
+.macro	pci_read_config bus, dev, fn, offset, AX
+	mov	$0xcf8, %dx
+	mov	$(0x80000000 + (\dev<<11) + (\fn<<8) + (\offset & 0xfc)), %eax
+	out	%eax, %dx
+	mov	$(0xcfc+(\offset&0x3)), %dx
+	in	%dx, \AX
+.endm
+
 .macro	pci_write_config32 bus, dev, fn, offset
 	pci_write_config \bus, \dev, \fn, \offset, %eax, %ecx
 .endm
@@ -38,6 +46,13 @@
 .endm
 .macro	pci_write_config8 bus, dev, fn, offset
 	pci_write_config \bus, \dev, \fn, \offset, %al, %cl
+.endm
+
+.macro	pci_read_config8 bus, dev, fn, offset
+	pci_read_config \bus, \dev, \fn, \offset, %al
+.endm
+.macro	pci_read_config16 bus, dev, fn, offset
+	pci_read_config \bus, \dev, \fn, \offset, %ax
 .endm
 
 .macro	call_nostack label
@@ -191,21 +206,51 @@ raminit_done:
 	// Set PAM as DRAM
 	## 0x000c_0000 - 0x000f_ffff : use DRAM
 
-	mov	$0x30, %cl
-	pci_write_config8 0x00, 0x00, 0x00, 0x90
-	mov	$0x33, %cl
-	pci_write_config8 0x00, 0x00, 0x00, 0x91
-	mov	$0x33, %cl
-	pci_write_config8 0x00, 0x00, 0x00, 0x92
-	mov	$0x33, %cl
-	pci_write_config8 0x00, 0x00, 0x00, 0x93
-	mov	$0x33, %cl
-	pci_write_config8 0x00, 0x00, 0x00, 0x94
-	mov	$0x33, %cl
-	pci_write_config8 0x00, 0x00, 0x00, 0x95
-	mov	$0x33, %cl
-	pci_write_config8 0x00, 0x00, 0x00, 0x96
+.equ PAMBASE_Q35, 0x90
+.equ PAMBASE_I440, 0x59
 
+	# devid
+	pci_read_config16 0x00, 0x00, 0x00, 0x02
+
+	mov	$0x1237, %cx
+	cmp	%ax, %cx
+	je	pam_i440
+
+	mov	$0x30, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_Q35 + 0)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_Q35 + 1)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_Q35 + 2)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_Q35 + 3)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_Q35 + 4)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_Q35 + 5)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_Q35 + 6)
+	jmp	pam_done
+
+pam_i440:
+	mov	$0x30, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_I440 + 0)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_I440 + 1)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_I440 + 2)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_I440 + 3)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_I440 + 4)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_I440 + 5)
+	mov	$0x33, %cl
+	pci_write_config8 0x00, 0x00, 0x00, (PAMBASE_I440 + 6)
+	jmp	pam_done
+
+
+pam_done:
 
 	## fill conventional memory
 	movl	$0, %edi

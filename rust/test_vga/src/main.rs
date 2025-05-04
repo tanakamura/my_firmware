@@ -8,7 +8,6 @@ use crate::common::pci::PciConfigIf;
 use common::pci;
 use common::println;
 use common::uart;
-use core::arch::asm;
 
 extern crate flashrom_init86;
 use init86;
@@ -41,21 +40,21 @@ fn invoke_int10(regs: &mut init86::X86State) {
 }
 
 //const INT10_HANDLER_SIZE: usize = 32;
-fn install_dummy_int10_handler() -> *mut u8 {
-    unsafe {
-        let ptr = common::alloc_from_16(32);
-        let bytes = [0xbau8, 0xf8, 0x03, 0xb0, 0x2e, 0xee, 0x31, 0xc0, 0xcf];
-        core::ptr::copy(bytes.as_ptr(), ptr, bytes.len());
-        for i in 1..32 {
-            let ivt = (i * 4) as *mut u16;
-            let ptr_seg = ((ptr as usize >> 4) & 0xf000) as u16;
-            let ptr_off = (ptr as usize & 0xffff) as u16;
-            *ivt = ptr_off;
-            *ivt.offset(1) = ptr_seg;
-        }
-        ptr
-    }
-}
+//fn install_dummy_int10_handler() -> *mut u8 {
+//    unsafe {
+//        let ptr = common::alloc_from_16(32);
+//        let bytes = [0xbau8, 0xf8, 0x03, 0xb0, 0x2e, 0xee, 0x31, 0xc0, 0xcf];
+//        core::ptr::copy(bytes.as_ptr(), ptr, bytes.len());
+//        for i in 1..32 {
+//            let ivt = (i * 4) as *mut u16;
+//            let ptr_seg = ((ptr as usize >> 4) & 0xf000) as u16;
+//            let ptr_off = (ptr as usize & 0xffff) as u16;
+//            *ivt = ptr_off;
+//            *ivt.offset(1) = ptr_seg;
+//        }
+//        ptr
+//    }
+//}
 
 fn find_vga<'a>(bus: &'a pci::PCIBus, pci: &dyn pci::PciConfigIf) -> Option<&'a pci::PCIDev> {
     for dev in &bus.devs {
@@ -123,33 +122,33 @@ extern "C" fn handle_int10() {
 
     unsafe { ((*service_table).set_16state)(&st) };
 }
-extern "C" fn handle_int00() {
-    let service_table = init86::get_service_func_table();
-    let mut st = unsafe { ((*service_table).get_16state)() };
-    println!("pc = {:#x}", st.eip);
-    unsafe {
-        x86::io::outb(0x20, 0x20);
-    };
-}
-
-extern "C" fn handle_int42() {
-    println!("handle_int42");
-}
-extern "C" fn handle_int4() {
-    println!("handle_int4");
-    // handle uart rx ready
-    unsafe {
-        let b = x86::io::inb(0x3f8);
-        x86::io::outb(0x20, 0x20);
-
-        let service_table = init86::get_service_func_table();
-        let mut st = unsafe { ((*service_table).get_16state)() };
-        println!("UART RX PC=: {:x}, b={:x}", st.eip, b);
-    }
-}
-extern "C" fn handle_int3() {
-    println!("handle_int3");
-}
+//extern "C" fn handle_int00() {
+//    let service_table = init86::get_service_func_table();
+//    let st = unsafe { ((*service_table).get_16state)() };
+//    println!("pc = {:#x}", st.eip);
+//    unsafe {
+//        x86::io::outb(0x20, 0x20);
+//    };
+//}
+//
+//extern "C" fn handle_int42() {
+//    println!("handle_int42");
+//}
+//extern "C" fn handle_int4() {
+//    println!("handle_int4");
+//    // handle uart rx ready
+//    unsafe {
+//        let b = x86::io::inb(0x3f8);
+//        x86::io::outb(0x20, 0x20);
+//
+//        let service_table = init86::get_service_func_table();
+//        let st = ((*service_table).get_16state)();
+//        println!("UART RX PC=: {:x}, b={:x}", st.eip, b);
+//    }
+//}
+//extern "C" fn handle_int3() {
+//    println!("handle_int3");
+//}
 
 pub fn main() {
     println!("Hello test_vga!!");
@@ -198,12 +197,13 @@ pub fn main() {
 
         unsafe {
             let vga_option_rom = 0x000c_0000 as *mut u8;
+
             let b0 = *vga_option_rom;
             let b1 = *vga_option_rom.offset(1);
 
             if (b0 == 0x55) && (b1 == 0xaa) {
             } else {
-                println!("VGA option rom not found");
+                println!("VGA option rom not found {:02x} {:02x}", b0, b1);
                 return;
             }
         }
@@ -304,8 +304,6 @@ pub extern "C" fn rmain() {
 extern "C" fn _start() -> i32 {
     common::common_init_from_sdram();
 
-    unsafe {
-        main();
-    }
+    main();
     0
 }

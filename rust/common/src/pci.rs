@@ -173,8 +173,8 @@ fn assign_resource_recursive(
         valid = false;
     }
     println!(
-        "bridge_start={:#x}, bridge_end={:#x}, *addr={:#x}, valid={}",
-        bridge_start, bridge_end, *addr, valid
+        "{:02x} bridge_start={:#x}, bridge_end={:#x}, *addr={:#x}, valid={}",
+        bus.self_bus, bridge_start, bridge_end, *addr, valid
     );
     let bridge_dev_adr = pci.bus_dev_fn_to_adr(bus.self_bus, bus.dev, bus.func);
 
@@ -221,9 +221,10 @@ fn enable_vga_optionrom(pci: &dyn PciConfigIf, dev: &PCIDev) {
 
         vga_option_rom_addr.copy_from_slice(rom_slice);
         println!(
-            "VGA Option ROM copied to 0xc0000-{:#x}, size={:#x}",
+            "VGA Option ROM copied to 0xc0000-{:#x}, size={:#x} from={:#x}",
             0xc0000 + size,
-            size
+            size,
+            adr as usize
         );
 
         let dev_adr = pci.bus_dev_fn_to_adr(dev.bus, dev.dev, dev.func);
@@ -272,7 +273,7 @@ fn enable_devices(pci: &dyn PciConfigIf, bus: &mut PCIBus) -> bool {
     }
 
     let mut bctrl = pci.read16(bridge_dev_adr, 0x3e);
-    bctrl |= (1 << 2); // enable isa
+    bctrl |= 1 << 2; // block isa
     if has_vga {
         bctrl |= (1 << 3) | (1 << 4); // decode vga range
         println!(
