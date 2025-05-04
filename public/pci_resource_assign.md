@@ -37,6 +37,10 @@ https://github.com/tanakamura/my_firmware/tree/qiita20250504/rust
 
     $ cargo build --release
 
-とする、すると、 `target/i686-firmware/release` 以下にオブジェクトができる。
+とする、すると、 `target/i686-firmware/release` 以下にオブジェクトができる。これに対して、
 
-     $ 
+    $ qemu-system-i386 -bios ./target/i686-firmware/release/test_vga -m 2g -M pc -serial mon:stdio
+
+などすれば、このビルドしたオブジェクトをファームウェアとして動かして確認できるはずだ。
+
+
